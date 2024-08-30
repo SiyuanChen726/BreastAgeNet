@@ -57,7 +57,7 @@ class EarlyStopping:
 def train_model(model, trainLoaders, valLoaders, 
                 optimizer, criterion,
                 patience, minEpochTrain, max_epochs, 
-                model_name, foldcounter,resFolder):
+                model_name, stainFunc, foldcounter,resFolder):
     since = time.time()
     
     train_acc_history = []
@@ -119,7 +119,7 @@ def train_model(model, trainLoaders, valLoaders,
             
             print(f'\n {phase} Loss: {np.round(val_loss, 4)}   ACC: {np.round(val_acc, 4)}')
 
-            ckpt_name = f"{resFolder}/{model_name}_MILbestModel_fold{foldcounter}"
+            ckpt_name = f"{resFolder}/{model_name}_{stainFunc}_MILbestModel_fold{foldcounter}.pt"
 
             early_stopping(epoch, val_loss, model, ckpt_name=ckpt_name)
             if early_stopping.early_stop:
