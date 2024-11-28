@@ -1,8 +1,9 @@
-# Multi-branch multiple-instance ordinal classification-based BreastAgeNet identified deviated tissue ageing in high-risk breast tissues![image](https://github.com/user-attachments/assets/f60b6c35-7267-49e1-a907-f2b32657d4cb)
+# Multi-branch multiple-instance ordinal classification-based BreastAgeNet identified deviated tissue ageing in high-risk breast tissues
+
 
 ## Description
 BreastAgeNet is a computational model designed to assess tissue aging in histologically normal breast tissue (NBT) from whole slide images (WSIs). It provides an ordinal classification of tissue aging into four distinct categories: <35 years, 35-45 years, 45-55 years, and >55 years, enabling a nuanced understanding of age-related changes in breast tissue.
-![BreastAgeNet Framework Overview](images/mismatched-aging.png)
+![BreastAgeNet Framework Overview](Docs/BreastAgeNet.png)
 
 
 The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related alterations in breast tissue. BreastAgeNet generates attention heatmaps that enhance interpretability, allowing clinicians to visualize and understand the regions of tissue most indicative of aging, offering transparency in the decision-making process.
