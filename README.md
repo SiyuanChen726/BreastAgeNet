@@ -3,7 +3,7 @@
 </p>
 
 <p style="text-align: justify;">
-    <span style="font-weight: bold; font-style: italic; color: yellow;">BreastAgeNet</span> is a computational model designed to assess tissue aging in histologically normal breast tissue (NBT) from whole slide images (WSIs). The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related alterations in breast tissue. 
+    <span style="font-weight: bold; font-style: italic;">BreastAgeNet</span> is a computational model designed to assess tissue aging in histologically normal breast tissue (NBT) from whole slide images (WSIs). The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related alterations in breast tissue. 
 </p>
 
 <p align="center">
