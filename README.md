@@ -1,7 +1,6 @@
 # Multi-branch multiple-instance ordinal classification-based _BreastAgeNet_ identified deviated tissue ageing in high-risk breast tissues
 
 
-## Description
 _BreastAgeNet_ is a computational model designed to assess tissue aging in histologically normal breast tissue (NBT) from whole slide images (WSIs).
 
 The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related alterations in breast tissue. 
@@ -14,27 +13,34 @@ The framework leverages advanced deep learning methods, incorporating a multi-br
 It provides an ordinal classification of tissue aging into four distinct categories: <35 years, 35-45 years, 45-55 years, and >55 years.
 
 <center>
-  <img src="Docs/NBT_ageing_prediction.png" width="80%">
+  <img src="Docs/UR_NBT_ageing_prediction.png" width="80%">
 </center>
 
 
-This enables a nuanced understanding of age-related changes in breast tissue through the attention mechanism from multiple branches. 
+This enables a more nuanced understanding of age-related changes in breast tissue by leveraging the attention mechanism across multiple branches
 
 <center>
   <img src="Docs/BreastAgeNet_attention.png" width="80%">
 </center>
 
 
+Moreover, _BreastAgeNet_ generates attention heatmaps that reveal ageing-related heterogeneity across breast tissue, with this variability showing strong associations with manually annotated, age-related lobule types. This suggests the model's ability to pinpoint localized aging diversity, which can be important for understanding subtle variations in aging processes within the same breast.
 
-Moreover, _BreastAgeNet_ generates attention heatmaps that enhance interpretability, allowing clinicians to visualize and understand the regions of tissue most indicative of aging, offering transparency in the decision-making process.
 <figure style="text-align:center;">
   <img src="Docs/attention_lobuletype_association.png" width="60%">
 </figure>
 
 
-BreastAgeNet has demonstrated the ability to detect age-related deviations in high-risk groups, including gBRCA1/2 mutation carriers and breast cancer patients. These findings could provide valuable insights into the early stages of cancer initiation, supporting precision prevention strategies tailored to high-risk individuals and potentially informing early intervention or surveillance efforts.
+With its substantiated ability to model aging trajectories in NBT, _BreastAgeNet_ has revealed deviations between expected (chronological) and observed (predicted) tissue aging in high-risk NBT from _gBRCA1/2_ mutation carriers or breast cancer patients. 
 
-![Identifying Mismatched Tissue Aging in NBT](images/mismatched-aging.png)
+<center>
+  <img src="Docs/HR_NBT_ageing_prediction.png" width="80%">
+</center>
+
+
+Taking it a step further, attention heatmaps can pinpoint tissue regions responsible for 'mismatched' tissue aging predictions. This approach opens the door to techniques like spatial transcriptomics, which could further elucidate molecular abnormalities at these sites—potentially identifying early indicators of cancer initiation.
+
+
 
 
 
