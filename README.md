@@ -28,7 +28,7 @@ This enables a nuanced understanding of age-related changes in breast tissue thr
 
 Moreover, _BreastAgeNet_ generates attention heatmaps that enhance interpretability, allowing clinicians to visualize and understand the regions of tissue most indicative of aging, offering transparency in the decision-making process.
 <figure style="text-align:center;">
-  <img src="Docs/attention_lobuletype_association.png" width="80%">
+  <img src="Docs/attention_lobuletype_association.png" width="60%">
 </figure>
 
 
