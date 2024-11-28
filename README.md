@@ -11,16 +11,24 @@ The framework leverages advanced deep learning methods, incorporating a multi-br
 </center>
 
 
-It provides an ordinal classification of tissue aging into four distinct categories: <35 years, 35-45 years, 45-55 years, and >55 years, enabling a nuanced understanding of age-related changes in breast tissue.
+It provides an ordinal classification of tissue aging into four distinct categories: <35 years, 35-45 years, 45-55 years, and >55 years.
 
 <center>
   <img src="Docs/NBT_ageing_prediction.png" width="80%">
 </center>
 
 
+This enables a nuanced understanding of age-related changes in breast tissue through the attention mechanism from multiple branches. 
+
+<center>
+  <img src="Docs/BreastAgeNet_attention.png" width="80%">
+</center>
+
+
+
 Moreover, _BreastAgeNet_ generates attention heatmaps that enhance interpretability, allowing clinicians to visualize and understand the regions of tissue most indicative of aging, offering transparency in the decision-making process.
 <figure style="text-align:center;">
-  <img src="Docs/BreastAgeNet.png" width="60%">
+  <img src="Docs/attention_lobuletype_association.png" width="80%">
 </figure>
 
 
