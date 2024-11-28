@@ -1,17 +1,26 @@
-# Multi-branch multiple-instance ordinal classification-based BreastAgeNet identified deviated tissue ageing in high-risk breast tissues
+# Multi-branch multiple-instance ordinal classification-based _BreastAgeNet_ identified deviated tissue ageing in high-risk breast tissues
 
 
 ## Description
-BreastAgeNet is a computational model designed to assess tissue aging in histologically normal breast tissue (NBT) from whole slide images (WSIs). It provides an ordinal classification of tissue aging into four distinct categories: <35 years, 35-45 years, 45-55 years, and >55 years, enabling a nuanced understanding of age-related changes in breast tissue.
+_BreastAgeNet_ is a computational model designed to assess tissue aging in histologically normal breast tissue (NBT) from whole slide images (WSIs).
 
+The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related alterations in breast tissue. 
 <figure style="text-align:center;">
   <img src="Docs/BreastAgeNet.png" width="60%">
-  <figcaption>BreastAgeNet Framework Overview</figcaption>
 </figure>
 
 
-The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related alterations in breast tissue. BreastAgeNet generates attention heatmaps that enhance interpretability, allowing clinicians to visualize and understand the regions of tissue most indicative of aging, offering transparency in the decision-making process.
-![BreastAgeNet Interpretability](images/mismatched-aging.png)
+It provides an ordinal classification of tissue aging into four distinct categories: <35 years, 35-45 years, 45-55 years, and >55 years, enabling a nuanced understanding of age-related changes in breast tissue.
+<figure style="text-align:center;">
+  <img src="Docs/BreastAgeNet.png" width="60%">
+</figure>
+
+
+
+Moreover, _BreastAgeNet_ generates attention heatmaps that enhance interpretability, allowing clinicians to visualize and understand the regions of tissue most indicative of aging, offering transparency in the decision-making process.
+<figure style="text-align:center;">
+  <img src="Docs/BreastAgeNet.png" width="60%">
+</figure>
 
 
 BreastAgeNet has demonstrated the ability to detect age-related deviations in high-risk groups, including gBRCA1/2 mutation carriers and breast cancer patients. These findings could provide valuable insights into the early stages of cancer initiation, supporting precision prevention strategies tailored to high-risk individuals and potentially informing early intervention or surveillance efforts.
