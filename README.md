@@ -3,7 +3,11 @@
 
 ## Description
 BreastAgeNet is a computational model designed to assess tissue aging in histologically normal breast tissue (NBT) from whole slide images (WSIs). It provides an ordinal classification of tissue aging into four distinct categories: <35 years, 35-45 years, 45-55 years, and >55 years, enabling a nuanced understanding of age-related changes in breast tissue.
-![BreastAgeNet Framework Overview](Docs/BreastAgeNet.png)
+
+<figure style="text-align:center;">
+  <img src="Docs/BreastAgeNet.png" width="80%">
+  <figcaption>BreastAgeNet Framework Overview</figcaption>
+</figure>
 
 
 The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related alterations in breast tissue. BreastAgeNet generates attention heatmaps that enhance interpretability, allowing clinicians to visualize and understand the regions of tissue most indicative of aging, offering transparency in the decision-making process.
