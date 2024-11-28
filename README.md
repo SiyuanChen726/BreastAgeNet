@@ -1,9 +1,9 @@
 <p style="text-align: justify;">
-    # Multi-branch multiple-instance ordinal classification-based <i>BreastAgeNet</i> identified deviated tissue ageing in high-risk breast tissues
+    # Multi-branch multiple-instance ordinal classification-based <span style="font-weight: bold; font-style: italic; color: yellow;">BreastAgeNet</span> identified deviated tissue ageing in high-risk breast tissues
 </p>
 
 <p style="text-align: justify;">
-    <i>BreastAgeNet</i> is a computational model designed to assess tissue aging in histologically normal breast tissue (NBT) from whole slide images (WSIs). The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related alterations in breast tissue. 
+    <span style="font-weight: bold; font-style: italic; color: yellow;">BreastAgeNet</span> is a computational model designed to assess tissue aging in histologically normal breast tissue (NBT) from whole slide images (WSIs). The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related alterations in breast tissue. 
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
 
 
 <p style="text-align: justify;">
-    <i>BreastAgeNet</i> provides an ordinal classification of tissue aging into four distinct categories: <35 years, 35-45 years, 45-55 years, and >55 years.
+    <span style="font-weight: bold; font-style: italic; color: yellow;">BreastAgeNet</span> provides an ordinal classification of tissue aging into four distinct categories: <35 years, 35-45 years, 45-55 years, and >55 years.
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
 
 
 <p style="text-align: justify;">
-    <i>BreastAgeNet's</i> multi-head self-attentions across multiple branches enable a more nuanced understanding of age-related changes in NBT.
+    <span style="font-weight: bold; font-style: italic; color: yellow;">BreastAgeNet</span> multi-head self-attentions across multiple branches enable a more nuanced understanding of age-related changes in NBT.
 </p>
 
 <p align="center">
@@ -30,7 +30,7 @@
 
 
 <p style="text-align: justify;">
-    Moreover, <i>BreastAgeNet</i> generates attention heatmaps that reveal ageing-related heterogeneity across breast tissue, with this variability showing strong associations with manually annotated, age-related lobule types. This suggests the model's ability to pinpoint localized aging diversity, which can be important for understanding subtle variations in aging processes within the same breast.
+    Moreover, <span style="font-weight: bold; font-style: italic; color: yellow;">BreastAgeNet</span> generates attention heatmaps that reveal ageing-related heterogeneity across breast tissue, with this variability showing strong associations with manually annotated, age-related lobule types. This suggests the model's ability to pinpoint localized aging diversity, which can be important for understanding subtle variations in aging processes within the same breast.
 </p>
 
 <p align="center">
