@@ -83,16 +83,16 @@ prj_BreastAgeNet/
 
 
 ## Implementation
-For step 0.1: Patch preparation, implement the following to get the corresponding mask and TC_mask:
-```
+For step 0.1: Patch preparation to get the corresponding mask and TC_mask, 
+please check the HistoQC repo: https://github.com/choosehappy/HistoQC.git
+and our NBT-Classifier repo: https://github.com/SiyuanChen726/NBT-Classifier
 
-```
 This step yields:
 ```
 prj_BreastAgeNet/
 ├── WSIs
 ├── QC/KHP
-│   ├── slide1/slide1_mask.png
+│   ├── slide1/slide1_maskuse.png
 │   └── ...
 ├── TC/KHP
 │   ├── slide1/slide1_TCmask.png
@@ -101,6 +101,8 @@ prj_BreastAgeNet/
 │   ├── slide1/slide1_patch.csv
 │   └── ...
 ```
+Note: The slide1_patch.csv file contains important patch information, including coordinates on WSI, and confidence of containing epithelium contents
+
 For step 0.2: Feature extraction, implement the following:
 ```
 
