@@ -18,32 +18,32 @@ The implementation can largely be broken down into the following steps:
 - **Step 3**: External testing  
 
 
-## Step 0. Dataset preprocessing
+### Step 0. Dataset preprocessing
 The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture ordinal age-related histological alterations. For the framework, the pre-processing includes: 
-### step 0.1: Patch preparation
+#### step 0.1: Patch preparation
 To detect foreground tissue regions, tessellated patches and tissue classification results.
-### step 0.2: Feature extraction. 
+#### step 0.2: Feature extraction. 
 patches are further converted into vectors using pre-trained image encoders. 
 <p align="center">
     <img src="Docs/BreastAgeNet.png" width="60%">
 </p>
 
 
-## Step 1. _BreastAgeNet_ training 
+### Step 1. _BreastAgeNet_ training 
 Training was done using different configurations through 5-fold cross-validation. 
 <p align="center">
     <img src="Docs/Bag_preparation.png" width="60%">
 </p>
 
 
-## Step 2. Visualisation
-### Step 2.1 tSNE projection of the whole dataset
+### Step 2. Visualisation
+#### Step 2.1 tSNE projection of the whole dataset
 **_BreastAgeNet's_** multi-head self-attentions across multiple branches enable a more nuanced understanding of age-related changes in NBT.
 <p align="center">
     <img src="Docs/BreastAgeNet_attention.png" width="60%">
 </p>
 
-### Step 2.2 Attention heatmap for a single WSI
+#### Step 2.2 Attention heatmap for a single WSI
 Moreover, **_BreastAgeNet_** provides attention heatmaps that can directly visualise ageing-related heterogeneity across the tissue, with this variability showing strong associations with manually annotated, age-related lobule types. 
 This suggests the model's ability to pinpoint localized ageing diversity, which can be important for understanding varied ageing processes within the same breast.
 <p align="center">
@@ -51,7 +51,7 @@ This suggests the model's ability to pinpoint localized ageing diversity, which 
 </p>
 
 
-## Step 3. External testing
+### Step 3. External testing
 
 <p align="center">
     <img src="Docs/UR_NBT_ageing_prediction.png" width="60%">
