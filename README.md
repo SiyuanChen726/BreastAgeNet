@@ -68,6 +68,7 @@ WSIs
 QC
 TC
 
+splits/ ├── ebrains │ ├── train.csv │ ├── val.csv │ └── test.csv
 
 ### Description of Files:
 - `train.csv`: Training data file.
