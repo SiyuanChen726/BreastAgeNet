@@ -20,9 +20,9 @@ The implementation can largely be broken down into the following steps:
 
 ### Step 0. Dataset preprocessing
 The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture ordinal age-related histological alterations. For the framework, the pre-processing includes: 
-#### step 0.1: Patch preparation
+#### Step 0.1: Patch preparation
 To detect foreground tissue regions, tessellated patches and tissue classification results.
-#### step 0.2: Feature extraction. 
+#### Step 0.2: Feature extraction. 
 patches are further converted into vectors using pre-trained image encoders. 
 <p align="center">
     <img src="Docs/BreastAgeNet.png" width="60%">
@@ -30,9 +30,9 @@ patches are further converted into vectors using pre-trained image encoders.
 
 
 ### Step 1. _BreastAgeNet_ training 
-Training was done using different configurations through 5-fold cross-validation. 
+The training was done using different configurations through 5-fold cross-validation. 
 <p align="center">
-    <img src="Docs/Bag_preparation.png" width="60%">
+    <img src="Docs/Bag_preparation.png" width="80%">
 </p>
 
 
@@ -62,14 +62,14 @@ With its substantiated ability to model ageing trajectories in NBT, <i>BreastAge
     <img src="Docs/HR_NBT_ageing_predictions.png" width="60%">
 </p>
 
-Taking it a step further, attention heatmaps can pinpoint tissue regions responsible for 'mismatched' tissue ageing predictions. This approach opens the door to techniques like spatial transcriptomics, which could further elucidate molecular abnormalities at these sites—potentially identifying early indicators of cancer initiation.
+Taking it further, attention heatmaps can pinpoint tissue regions responsible for 'mismatched' tissue ageing predictions. This approach opens the door to techniques like spatial transcriptomics, which could further elucidate molecular abnormalities at these sites—potentially identifying early indicators of cancer initiation.
 
 
 ## Installation
 To get started, clone the repository and install the required dependencies. 
 ```
 ```
-The the empty folder are organised as:
+The empty folder is organised as follows:
 ```
 prj_BreastAgeNet/
 ├── WSIs
@@ -135,8 +135,8 @@ prj_BreastAgeNet/
 │   │──slide1_ResNet50.pt
 │   └── ...
 ```
-For Step 2. Visualisation, please refer to the notebook.
-For Step 3. External testing, please refer to the notebook or implement the following:
+For Step 2. For visualisation, please refer to the notebook.
+For Step 3. For external testing, please refer to the notebook or implement the following:
 ```
 
 ```
