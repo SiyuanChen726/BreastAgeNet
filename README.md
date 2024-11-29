@@ -32,7 +32,7 @@ patches are further converted into vectors using pre-trained image encoders.
 ### Step 1. _BreastAgeNet_ training 
 The training was done using different configurations through 5-fold cross-validation. 
 <p align="center">
-    <img src="Docs/Bag_preparation.png" width="80%">
+    <img src="Docs/Bag_preparation.png" width="100%">
 </p>
 
 
