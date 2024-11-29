@@ -84,8 +84,9 @@ prj_BreastAgeNet/
 
 ## Implementation
 For step 0.1: Patch preparation to get the corresponding mask and TC_mask, 
-please check the HistoQC repo: https://github.com/choosehappy/HistoQC.git
-and our NBT-Classifier repo: https://github.com/SiyuanChen726/NBT-Classifier
+please check [HistoQC](https://github.com/choosehappy/HistoQC.git)
+
+and our [NBT-Classifier] (https://github.com/SiyuanChen726/NBT-Classifier.git)
 
 This step yields:
 ```
