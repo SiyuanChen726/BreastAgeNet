@@ -69,9 +69,10 @@ Taking it further, attention heatmaps can pinpoint tissue regions responsible fo
 To get started, clone the repository and install the required dependencies. 
 ```
 ```
-The empty folder is organised as follows:
+WSI data is organised as follows:
 ```
 prj_BreastAgeNet/
+├── CLINIC/clinicData_all.csv
 ├── WSIs
 │   ├── KHP/slide1.ndpi, slide2.ndpi ...
 │   ├── NKI/slide1.mrxs, ...
