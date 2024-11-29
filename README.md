@@ -25,7 +25,7 @@ To detect foreground tissue regions, tessellated patches and tissue classificati
 #### Step 0.2: Feature extraction. 
 patches are further converted into vectors using pre-trained image encoders. 
 <p align="center">
-    <img src="Docs/BreastAgeNet.png" width="60%">
+    <img src="Docs/BreastAgeNet.png" width="80%">
 </p>
 
 
