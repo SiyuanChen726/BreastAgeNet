@@ -8,34 +8,17 @@
 
 **_BreastAgeNet_** is a computational pathology (CPath) framework designed to assess tissue ageing in histologically normal breast tissue (NBT) from whole slide images (WSIs). 
 The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related histological alterations. 
-
 <p align="center">
     <img src="Docs/BreastAgeNet.png" width="60%">
 </p>
 
 
-
-**_BreastAgeNet_** provides an ordinal classification of tissue ageing in NBT from WSI. 
-
+**_BreastAgeNet_** was developed and tested across multiple cohorts
 <p align="center">
-    <img src="Docs/UR_NBT_ageing_prediction.png" width="60%">
+    <img src="Docs/BreastAgeNet.png" width="60%">
 </p>
 
-
-The implementations can largely be broken down into the following steps:
-Step 0: Dataset preprocessing.           to get input bags of patches -> 0.1 _patch.csv; 0.2 _epithelium0.9_UNI.h5
-Step 1: _BreastAgeNet_ training.                -> .pt
-Step 2: Visualization.                     -> .png, MAE
-Step 3: External testing.                  -> attention_heatmap.png for WSI, tSNE projections for the whole dataset 
-
-
-
-# Step 0. Dataset preprocessing
-to predict tissue ageing directly from WSI, **_BreastAgeNet_** employs MIL architecture. For this, we break down the pre-processing into: 
-
-step 0.1: Patch preparation
-prj_BreastAgeNet was developed and tested across multiple cohorts, the empty folder are organised as:
-
+The the empty folder are organised as:
 ```
 prj_BreastAgeNet/
 ├── WSIs
@@ -45,6 +28,20 @@ prj_BreastAgeNet/
 │   ├── EPFL/slide1.vsi, ...
 │   └── SGK/slide1.svs, ...
 ```
+
+The implementations can largely be broken down into the following steps:
+- **Step 0**: Dataset pre-processing  
+- **Step 1**: _BreastAgeNet_ training  
+- **Step 2**: Visualization  
+- **Step 3**: External testing  
+
+
+
+# Step 0. Dataset preprocessing
+to predict tissue ageing directly from WSI, **_BreastAgeNet_** employs MIL architecture. For this, we break down the pre-processing into: 
+
+step 0.1: Patch preparation
+
 
 to get bg_mask and TC_mask, implement the following:
 
@@ -89,6 +86,12 @@ prj_BreastAgeNet/
 │   └── ...
 ```
 
+
+**_BreastAgeNet_** provides an ordinal classification of tissue ageing in NBT from WSI. 
+
+<p align="center">
+    <img src="Docs/UR_NBT_ageing_prediction.png" width="60%">
+</p>
 
 
 
