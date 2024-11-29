@@ -121,7 +121,14 @@ prj_BreastAgeNet/
 ```
 For Step 1. _BreastAgeNet_ training, implement the following:
 ```
-python main.py --model_name UNI --TC_epi 0.9 --bag_size 250 --attention MultiHeadAttention --FEATURES /path/to/features --CLINIC /path/to/clinic.csv --RESULTS /path/to/results
+python main.py \
+  --model_name UNI \
+  --TC_epi 0.9 \
+  --bag_size 250 \
+  --attention MultiHeadAttention \
+  --FEATURES /path/to/features \
+  --CLINIC /path/to/clinic.csv \
+  --RESULTS /path/to/results
 ```
 This step yields:
 ```
