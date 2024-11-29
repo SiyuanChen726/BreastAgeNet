@@ -47,7 +47,7 @@ The training was done using different configurations through 5-fold cross-valida
 Moreover, **_BreastAgeNet_** provides attention heatmaps that can directly visualise ageing-related heterogeneity across the tissue, with this variability showing strong associations with manually annotated, age-related lobule types. 
 This suggests the model's ability to pinpoint localized ageing diversity, which can be important for understanding varied ageing processes within the same breast.
 <p align="center">
-    <img src="Docs/attention_lobuletype_association.png" width="60%">
+    <img src="Docs/attention_lobuletype_association.png" width="100%">
 </p>
 
 
