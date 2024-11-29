@@ -5,6 +5,7 @@
 
 
 # **_BreastAgeNet_** Walkthrough
+
 **_BreastAgeNet_** is a computational pathology (CPath) framework designed to assess tissue ageing in histologically normal breast tissue (NBT) from whole slide images (WSIs). 
 The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture subtle age-related histological alterations. 
 
@@ -13,11 +14,82 @@ The framework leverages advanced deep learning methods, incorporating a multi-br
 </p>
 
 
-**_BreastAgeNet_** delivers an ordinal classification of tissue ageing, categorizing it into four distinct age ranges: <35 years, 35-45 years, 45-55 years, and >55 years.
+
+**_BreastAgeNet_** provides an ordinal classification of tissue ageing in NBT from WSI. 
 
 <p align="center">
     <img src="Docs/UR_NBT_ageing_prediction.png" width="60%">
 </p>
+
+
+The implementations can largely be broken down into the following steps:
+Step 0: Dataset preprocessing.           to get input bags of patches -> 0.1 _patch.csv; 0.2 _epithelium0.9_UNI.h5
+Step 1: _BreastAgeNet_ training.                -> .pt
+Step 2: Visualization.                     -> .png, MAE
+Step 3: External testing.                  -> attention_heatmap.png for WSI, tSNE projections for the whole dataset 
+
+
+
+# Step 0. Dataset preprocessing
+to predict tissue ageing directly from WSI, **_BreastAgeNet_** employs MIL architecture. For this, we break down the pre-processing into: 
+
+step 0.1: Patch preparation
+prj_BreastAgeNet was developed and tested across multiple cohorts, the empty folder are organised as:
+
+```
+prj_BreastAgeNet/
+├── WSIs
+│   ├── KHP/slide1.ndpi, slide2.ndpi ...
+│   ├── NKI/slide1.mrxs, ...
+│   ├── BCI/slide1.ndpi, ...
+│   ├── EPFL/slide1.vsi, ...
+│   └── SGK/slide1.svs, ...
+```
+
+to get bg_mask and TC_mask, implement the following:
+
+```
+
+```
+
+
+```
+prj_BreastAgeNet/
+├── WSIs
+├── QC/KHP
+│   ├── slide1/slide1_mask.png
+│   └── ...
+├── TC/KHP
+│   ├── slide1/slide1_TCmask.png
+│   └── ...
+├── Features/KHP
+│   ├── slide1/slide1_patch.csv
+│   └── ...
+```
+
+
+step 0.2: Feature extraction. patches are further converted into vectors using pre-trained image encoders. For this, implement the following:
+```
+
+```
+
+The pre-processing dataset will be organised as:
+```
+prj_BreastAgeNet/
+├── WSIs
+├── QC
+├── TC
+├── Features/KHP
+│   ├── slide1
+│   │   ├── slide1_patch.csv
+│   │   ├── slide1_UNI.h5
+│   │   ├── slide1_gigapath.h5
+│   │   ├── slide1_iBOT.h5
+│   │   └── slide1_ResNet50.h5
+│   └── ...
+```
+
+
 
 
 **_BreastAgeNet's_** multi-head self-attentions across multiple branches enable a more nuanced understanding of age-related changes in NBT.
@@ -52,33 +124,8 @@ To get started, clone the repository and install the required dependencies.
 
 
 
-# **_BreastAgeNet_** Walkthrough
-
-_BreastAgeNet_ can largely be broken down into the following steps:
-
-Step 0: Dataset preprocessing to get input bags of patches -> _patch.csv
-Step 1: Extract features from patches using pre-trained CPath models -> _epithelium0.9_UNI.h5
-Step 2: Perform ordinal classification 5-fold cross-validation training -> .pt
-Step 3: External testing -> .png, MAE
-Step 4: Visualization. -> attention_heatmap.png for WSI, tSNE projections for the whole dataset 
 
 
-# Step 0. Dataset organisation and preprocessing
-WSIs
-QC
-TC
-
-splits/ ├── ebrains │ ├── train.csv │ ├── val.csv │ └── test.csv
-
-### Description of Files:
-- `train.csv`: Training data file.
-- `val.csv`: Validation data file.
-- `test.csv`: Test data file.
-
-
-
-
-to get input bags of patches -> _patch.csv
 
 
 # Step 1. Feature extraction
