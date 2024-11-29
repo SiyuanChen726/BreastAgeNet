@@ -105,7 +105,13 @@ Note: The slide1_patch.csv file contains important patch information, including 
 
 For step 0.2: Feature extraction, implement the following:
 ```
-
+python extractFeatures.py \
+  --WSIs /path/to/WSIs \
+  --FEATURES /path/to/features \
+  --model_name UNI \
+  --stainFunc augmentation \
+  --batch_size 32 \
+  --num_workers 4
 ```
 This step yields:
 ```
