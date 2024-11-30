@@ -164,9 +164,6 @@ for foldcounter, (train_index, test_index) in enumerate(kf.split(patientID, true
     criterion = OrdinalCrossEntropyLoss(n_classes=n_classes, weights=weights)
     criterion.to(device)  # Move to GPU if applicable
 
-    # earlystopping
-    early_stopping = EarlyStopping(patience=patience, stop_epoch=minEpochTrain, verbose=True)
-
     # trainer
     ckpt_name = f'{RESULTS}/epi{TC_epi}_{bag_size}_{model_name}_{attention}_fold{foldcounter}_bestModel.pt'
     train_loss_history, train_acc_history, val_loss_history, val_acc_history = train_model(
