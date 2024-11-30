@@ -12,6 +12,7 @@ import pandas as pd
 from PIL import Image
 import openslide
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 import seaborn as sns
 
 # Machine Learning and Data Manipulation
