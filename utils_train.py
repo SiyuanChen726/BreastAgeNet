@@ -332,17 +332,15 @@ class OrdinalCrossEntropyLoss(nn.Module):
     def __init__(self, n_classes, weights=None):
         super(OrdinalCrossEntropyLoss, self).__init__()
         self.num_classes = n_classes
-        self.bce = nn.BCEWithLogitsLoss(reduction='none')  # Use 'none' to handle weights manually
+        self.bce = nn.BCEWithLogitsLoss(reduction='none')  
         self.weights = weights
 
     def forward(self, logits, labels):
-        # Expand labels to create binary labels for each class threshold
-        labels_expanded = labels.unsqueeze(1).repeat(1, self.num_classes)  # [batch_size, n_classes]
-        
-        # Create binary labels: [0,0,0], [1,0,0], [1,1,0], [1,1,1], etc.
-        binary_labels = (labels_expanded > torch.arange(self.num_classes).to(labels.device)).float()
-        
-        # Compute the BCE loss for each class (ignoring the reduction)
+        # labels: from [1] to [1,1,1]
+        labels_expanded = labels.unsqueeze(1).repeat(1, self.num_classes) 
+        # Compare [1,1,1] > tensor([0, 1, 2]) --> [True, False, False]  --> [1, 0, 0]
+        binary_labels = (labels_expanded > torch.arange(self.num_classes).to(labels.device)).float() 
+        # Compute the BCE loss for each class: [0.98, 0.02, 0.02] vs [1, 0, 0]
         loss = self.bce(logits, binary_labels)
 
         # If weights are provided, apply them (per sample, per class)
