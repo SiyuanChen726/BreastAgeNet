@@ -62,8 +62,6 @@ With its substantiated ability to model ageing trajectories in NBT, <i>BreastAge
     <img src="Docs/HR_NBT_ageing_predictions.png" width="60%">
 </p>
 
-Taking it further, attention heatmaps can pinpoint tissue regions responsible for 'mismatched' tissue ageing predictions. This approach opens the door to techniques like spatial transcriptomics, which could further elucidate molecular abnormalities at these sites—potentially identifying early indicators of cancer initiation.
-
 
 ## Installation
 To get started, clone the repository and install the required dependencies. 
@@ -154,4 +152,10 @@ prj_BreastAgeNet/
 For Step 2. For visualisation, please refer to [notebook vis_tSNE](notebooks/vis_tSNE.ipynb) and [notebook vis_attention_heatmep](notebooks/vis_attention_heatmep.ipynb)
 
 For Step 3. For external testing, please refer to [notebook inference](notebooks/inference.ipynb)
+
+
+## **_BreastAgeNet_** future directions
+**_BreastAgeNet_** can identify NBT with abnormal ageing process. Taking it further, attention heatmaps can pinpoint tissue regions responsible for 'mismatched' tissue ageing predictions. This approach opens the door to techniques like spatial transcriptomics, which could further elucidate molecular abnormalities at these sites—potentially identifying early indicators of cancer initiation.
+
+## Acknowledgements
 
