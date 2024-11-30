@@ -68,6 +68,7 @@ Taking it further, attention heatmaps can pinpoint tissue regions responsible fo
 ## Installation
 To get started, clone the repository and install the required dependencies. 
 ```
+git clone https://github.com/SiyuanChen726/BreastAgeNet.git
 ```
 WSI data is organised as follows:
 ```
@@ -154,9 +155,5 @@ prj_BreastAgeNet/
 ```
 For Step 2. For visualisation, please refer to [notebook vis_tSNE](vis_tSNE.ipynb) and [notebook vis_attention_heatmep](vis_attention_heatmep.ipynb)
 
-For Step 3. For external testing, please refer to the notebook or implement the following:
-```
-
-```
-
+For Step 3. For external testing, please refer to [notebook inference](inference.ipynb)
 
