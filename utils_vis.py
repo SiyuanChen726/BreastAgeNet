@@ -278,7 +278,7 @@ def plot_density_by_age(fea_df, max_categories=4, save_pt=None):
 
     # Loop through the categories and create a density plot for each one
     for i in range(max_categories):
-        category = fea_df['age_group'][i]
+        category = np.unique(fea_df['age_group'])[i]
         subset = fea_df[fea_df['age_group'] == category]
 
         sns.kdeplot(
