@@ -199,8 +199,6 @@ def sample_k_patches(wsi, patch_ids, num=25, aug=False):
 
 
 
-
-
 def plot_tsne(fea_df, color='age_group', point_size=3, vmin=None, vmax=None, save_pt=None):
     """
     Creates a t-SNE plot colored by a specified feature.
@@ -216,8 +214,10 @@ def plot_tsne(fea_df, color='age_group', point_size=3, vmin=None, vmax=None, sav
     if color == "age_group":
         cmap = plt.get_cmap('viridis', fea_df['age_group'].nunique())  # Use 'viridis' colormap for age group
     elif color == "Cluster":
-        n_clusters = len(np.unique(fea_df['Cluster']))
-        cmap = plt.get_cmap('tab20', n_clusters)  # Use 'tab20' colormap for clusters
+        cmap = plt.get_cmap('Set3')
+        indices = [0, 4, 8, 11]  # Indices of the colors to retrieve
+        colors = [cmap(i / 11) for i in indices]  # 'Set3' has 12 colors, so divide by 11
+        cmap = LinearSegmentedColormap.from_list("CustomSet3", colors)
     elif "attention" in color:
         fea_df[color] = pd.to_numeric(fea_df[color], errors='coerce') 
         cmap = "viridis"
@@ -258,6 +258,7 @@ def plot_tsne(fea_df, color='age_group', point_size=3, vmin=None, vmax=None, sav
     # Display the plot
     plt.show()
 
+    
 
 
 def plot_density_by_age(fea_df, max_categories=4, save_pt=None):
@@ -276,14 +277,10 @@ def plot_density_by_age(fea_df, max_categories=4, save_pt=None):
     # Flatten the axes array for easy iteration
     axes = axes.flatten()
 
-    # Get unique categories (drop NaN values and sort)
-    unique_categories = fea_df['Category_Code'].dropna().unique()
-    unique_categories.sort()
-
     # Loop through the categories and create a density plot for each one
     for i in range(max_categories):
         category = unique_categories[i]
-        subset = fea_df[fea_df['Category_Code'] == category]
+        subset = fea_df[fea_df['age_group'] == category]
 
         sns.kdeplot(
             x=subset["tsne1"],
@@ -310,7 +307,6 @@ def plot_density_by_age(fea_df, max_categories=4, save_pt=None):
 
     # Show the plot
     plt.show()
-
 
 
 
