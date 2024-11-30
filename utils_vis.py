@@ -260,7 +260,6 @@ def plot_tsne(fea_df, color='age_group', point_size=3, vmin=None, vmax=None, sav
 
     
 
-
 def plot_density_by_age(fea_df, max_categories=4, save_pt=None):
     """
     Plot density plots based on t-SNE results for different age categories.
@@ -279,7 +278,7 @@ def plot_density_by_age(fea_df, max_categories=4, save_pt=None):
 
     # Loop through the categories and create a density plot for each one
     for i in range(max_categories):
-        category = unique_categories[i]
+        category = fea_df['age_group'][i]
         subset = fea_df[fea_df['age_group'] == category]
 
         sns.kdeplot(
@@ -308,7 +307,7 @@ def plot_density_by_age(fea_df, max_categories=4, save_pt=None):
     # Show the plot
     plt.show()
 
-
+ 
 
 
 def parse_wsi_id(patch_id):
