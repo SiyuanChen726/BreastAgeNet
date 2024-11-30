@@ -151,7 +151,7 @@ prj_BreastAgeNet/
 │   │──epi0.9_UNI_250_MultiHeadAttention_fold4_trainvalCurves_testMAE0.53.png
 │   └── ...
 ```
-For Step 2. For visualisation, please refer to [notebook vis_tSNE](vis_tSNE.ipynb) and [notebook vis_attention_heatmep](vis_attention_heatmep.ipynb)
+For Step 2. For visualisation, please refer to [notebook vis_tSNE](notebooks/vis_tSNE.ipynb) and [notebook vis_attention_heatmep](notebooks/vis_attention_heatmep.ipynb)
 
-For Step 3. For external testing, please refer to [notebook inference](inference.ipynb)
+For Step 3. For external testing, please refer to [notebook inference](notebooks/inference.ipynb)
 
