@@ -216,7 +216,7 @@ def plot_tsne(fea_df, color='age_group', point_size=3, vmin=None, vmax=None, sav
         cmap = plt.get_cmap('viridis', fea_df['age_group'].nunique())  # Use 'viridis' colormap for age group
     elif color == "Cluster":
         cmap = plt.get_cmap('Set3')
-        indices = [0, 4, 8, 11]  # Indices of the colors to retrieve
+        indices = [0, 8, 11, 4]  # Indices of the colors to retrieve
         colors = [cmap(i / 11) for i in indices]  # 'Set3' has 12 colors, so divide by 11
         cmap = LinearSegmentedColormap.from_list("CustomSet3", colors)
     elif "attention" in color:
