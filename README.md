@@ -40,7 +40,7 @@ The training was done using different configurations through 5-fold cross-valida
 #### Step 2.1 tSNE projection of the whole dataset
 **_BreastAgeNet's_** multi-head self-attentions across multiple branches enable a more nuanced understanding of age-related changes in NBT.
 <p align="center">
-    <img src="Docs/BreastAgeNet_attention.png" width="60%">
+    <img src="Docs/BreastAgeNet_attention.png" width="80%">
 </p>
 
 #### Step 2.2 Attention heatmap for a single WSI
