@@ -402,6 +402,86 @@ def paste_HE_on_tsne(fea_df, WSI_folder, max_dim=100, n_samples=1000, image_size
 
 
 
+
+import numpy as np
+import torch
+from torch.utils.data import Dataset, DataLoader
+
+class WSIDataset(Dataset):
+    def __init__(self, df, bag_size):
+        """
+        Initializes the dataset.
+
+        Args:
+            df (pd.DataFrame): A DataFrame containing the data.
+            bag_size (int): The size of each bag (number of patches per sample).
+        """
+        self.data = df.values  # The patch data (features)
+        self.patch_ids = df.index  # The patch IDs (from DataFrame index)
+        self.bag_size = bag_size  # The bag size (how many patches in each bag)
+        self.num_patches = self.data.shape[0]  # Total number of patches
+
+    
+    def __len__(self):
+        """
+        Returns the number of bags in the dataset.
+
+        A "bag" is a collection of patches. If the total number of patches
+        is not an exact multiple of the bag size, the last bag will contain
+        fewer patches.
+        """
+        return int(np.ceil(self.num_patches / self.bag_size))
+
+    
+    def __getitem__(self, idx):
+        """
+        Returns a bag of patches and their corresponding patch IDs for a given index.
+
+        Args:
+            idx (int): Index of the bag (not the individual patch).
+        
+        Returns:
+            patch_ids (np.array): Array of patch IDs for the bag.
+            patches (torch.Tensor): Tensor of patches for the bag.
+        """
+        start_idx = idx * self.bag_size  # Start index for the bag
+        end_idx = min(start_idx + self.bag_size, self.num_patches)  # End index for the bag
+        patches = self.data[start_idx:end_idx]  # Get the patches for the current bag
+        patch_ids = self.patch_ids[start_idx:end_idx]  # Get the patch IDs for the current bag
+
+        # Pad if not enough patches to form a full bag
+        if len(patches) < self.bag_size:
+            padding = np.zeros((self.bag_size - len(patches), patches.shape[1]))  # Pad with zeros
+            patches = np.vstack([patches, padding])  # Add padding to patches
+            patch_ids = np.append(patch_ids, [''] * (self.bag_size - len(patch_ids)))  # Add empty strings for patch IDs
+
+        # Convert patch_ids to a list (or numpy array)
+        patch_ids = list(patch_ids)  # Convert to a list (or np.array)
+
+        # Return patch_ids as a list and patches as a tensor
+        return patch_ids, torch.tensor(patches, dtype=torch.float32)
+
+ 
+
+def WSI_loader(df, batch_size=256, bag_size=250, shuffle=False):
+    """
+    Creates a DataLoader for the WSIDataset.
+
+    Args:
+        df (pd.DataFrame): A DataFrame containing the data.
+        batch_size (int): The batch size for the DataLoader.
+        bag_size (int): The number of patches per bag.
+        shuffle (bool): Whether or not to shuffle the data.
+
+    Returns:
+        DataLoader: A PyTorch DataLoader for the WSIDataset.
+    """
+    dataset = WSIDataset(df, bag_size)  # Create the custom dataset
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)  # Create DataLoader
+    return dataloader
+
+
+
 def get_WSIheatmap_df(wsi_id, clinic_df):
     fea_pt = clinic_df.loc[clinic_df["wsi_id"] == wsi_id, "h5df"].values
     fea_pt = Path(f"/scratch/prj/cb_normalbreast/Siyuan/prj_normal/BreastAgeNet/RootDir/KHP_RM/{wsi_id}/{wsi_id}_bagFeature_gigapath_reinhard.h5")
