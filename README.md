@@ -67,6 +67,9 @@ With its substantiated ability to model ageing trajectories in NBT, <i>BreastAge
 To get started, clone the repository and install the required dependencies. 
 ```
 git clone https://github.com/SiyuanChen726/BreastAgeNet.git
+cd BreastAgeNet
+conda env create -f environment.yml
+conda activate torch-env
 ```
 WSI data is organised as follows:
 ```
