@@ -64,7 +64,7 @@ With its substantiated ability to model ageing trajectories in NBT, <i>BreastAge
 
 
 ## Installation
-To get started, clone the repository and install the required dependencies. 
+To get started, clone the repository and install [RandStainNA](https://github.com/yiqings/RandStainNA.git) and other required dependencies. 
 ```
 git clone https://github.com/SiyuanChen726/BreastAgeNet.git
 cd BreastAgeNet
