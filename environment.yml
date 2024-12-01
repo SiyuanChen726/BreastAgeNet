@@ -1,4 +1,4 @@
-name: /scratch_tmp/users/k21066795/conda/torch-env
+name: torch-env
 channels:
   - pytorch
   - conda-forge
