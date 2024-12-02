@@ -657,7 +657,7 @@ def plot_cm_norm(y_true, y_pred, fontsize=16):
 
 def lobulemask_fromAnnotation(wsi_path=None, anno_pt=None):
     slide = openslide.OpenSlide(wsi_path)
-    HE_img = np.array(wsi.read_region((0, 0), slide.level_count-1, slide.level_dimensions[slide.level_count-1]).convert("RGB"))
+    HE_img = np.array(slide.read_region((0, 0), slide.level_count-1, slide.level_dimensions[slide.level_count-1]).convert("RGB"))
     
     with open(anno_pt, "r") as f:
         shapes = json.load(f)
