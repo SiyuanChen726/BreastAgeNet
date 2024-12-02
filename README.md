@@ -71,6 +71,8 @@ cd BreastAgeNet
 conda env create -f environment.yml
 conda activate torch-env
 ```
+
+## Implementation
 WSI data is expected to be organised as follows:
 ```
 prj_BreastAgeNet/
@@ -83,11 +85,8 @@ prj_BreastAgeNet/
 │   └── SGK/slide1.svs, ...
 ```
 
-
-## Implementation
 For step 0.1: Patch preparation to get the corresponding mask and TC_mask, 
 please check [HistoQC](https://github.com/choosehappy/HistoQC.git) and our [_NBT-Classifier_](https://github.com/SiyuanChen726/NBT-Classifier.git)
-
 This step yields:
 ```
 prj_BreastAgeNet/
@@ -129,6 +128,7 @@ prj_BreastAgeNet/
 │   │   └── slide1_ResNet50.h5
 │   └── ...
 ```
+
 For Step 1. _BreastAgeNet_ training, implement the following:
 ```
 python main.py \
@@ -152,6 +152,7 @@ prj_BreastAgeNet/
 │   │──epi0.9_UNI_250_MultiHeadAttention_fold4_trainvalCurves_testMAE0.53.png
 │   └── ...
 ```
+
 For Step 2. For visualisation, please refer to [notebook vis_tSNE](notebooks/vis_tSNE.ipynb) and [notebook vis_attention_heatmep](notebooks/vis_attention_heatmep.ipynb)
 
 For Step 3. For external testing, please refer to [notebook inference](notebooks/inference.ipynb)
@@ -159,6 +160,7 @@ For Step 3. For external testing, please refer to [notebook inference](notebooks
 
 ## **_BreastAgeNet_** future directions
 **_BreastAgeNet_** can identify NBT with abnormal ageing process. Taking it further, attention heatmaps can pinpoint tissue regions responsible for 'mismatched' tissue ageing predictions. This approach opens the door to techniques like spatial transcriptomics, which could further elucidate molecular abnormalities at these sites—potentially identifying early indicators of cancer initiation.
+
 
 ## Acknowledgements
 
