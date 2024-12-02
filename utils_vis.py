@@ -2,6 +2,8 @@
 import os
 from pathlib import Path
 import sys
+import h5py
+import random
 from tqdm import tqdm
 
 # Scientific Computing
@@ -17,8 +19,7 @@ import seaborn as sns
 
 # Machine Learning and Data Manipulation
 from sklearn.manifold import TSNE
-import h5py
-import random
+from sklearn.metrics import confusion_matrix
 
 # Custom Modules
 # sys.path.append('/scratch/users/k21066795/prj_normal/RandStainNA')
@@ -555,8 +556,8 @@ def get_branch_attn(df, branch):
     return img
 
 
-import numpy as np
-import matplotlib.pyplot as plt
+
+
 
 def show_WSI_attnMap(img, branch, vmin=None, vmax=None, save_path=None):
     """
@@ -609,8 +610,54 @@ def show_WSI_attnMap(img, branch, vmin=None, vmax=None, save_path=None):
 
 
 
+
+def plot_cm(y_true, y_pred, fontsize=16):
+    # Compute confusion matrix
+    cm = confusion_matrix(y_true, y_pred)
+    
+    # Plot confusion matrix using seaborn's heatmap
+    plt.figure(figsize=(6, 5))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=np.unique(y_true), yticklabels=np.unique(y_true),
+                annot_kws={"size": fontsize})  # Adjust font size for annotations
+    
+    # Set labels and title with larger font size
+    plt.xlabel('Predicted', fontsize=fontsize)
+    plt.ylabel('True', fontsize=fontsize)
+    plt.title('Confusion Matrix', fontsize=fontsize)
+    
+    # Set tick label font size
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
+    
+    plt.show()
+
+
+def plot_cm_norm(y_true, y_pred, fontsize=16):
+    # Compute normalized confusion matrix
+    cm = confusion_matrix(y_true, y_pred, normalize='true')
+    
+    # Plot normalized confusion matrix
+    plt.figure(figsize=(6, 5))
+    sns.heatmap(cm, annot=True, fmt='.2f', cmap='Blues', 
+                xticklabels=np.unique(y_true), yticklabels=np.unique(y_true),
+                annot_kws={"size": fontsize})  # Adjust font size for annotations
+    
+    # Set labels and title with larger font size
+    plt.xlabel('Predicted', fontsize=fontsize)
+    plt.ylabel('True', fontsize=fontsize)
+    plt.title('Normalized Confusion Matrix', fontsize=fontsize)
+    
+    # Set tick label font size
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
+    
+    plt.show()
+
+
 def lobulemask_fromAnnotation(wsi_path=None, anno_pt=None):
     slide = openslide.OpenSlide(wsi_path)
+    HE_img = np.array(wsi.read_region((0, 0), slide.level_count-1, slide.level_dimensions[slide.level_count-1]).convert("RGB"))
     
     with open(anno_pt, "r") as f:
         shapes = json.load(f)
@@ -642,12 +689,14 @@ def lobulemask_fromAnnotation(wsi_path=None, anno_pt=None):
         mask = cv2.drawContours(mask, [points], -1, color=color, thickness=1)
         mask = cv2.fillPoly(mask, [points], color=color)
         
-    return mask
+    return mask, HE_img
 
 
 
 
 def barplot_multiple_WSIs(clinic_df, save_pt):
+    clinic_df["patient_id"] = clinic_df["patient_id"].fillna('').astype(str)
+    
     clinic_df_sorted = clinic_df.sort_values(by='age', ascending=True)
     pivot_df = clinic_df_sorted.groupby(['patient_id', 'final_prediction']).size().unstack(fill_value=0)
     patient_ids_sorted = clinic_df_sorted['patient_id'].drop_duplicates().values
@@ -656,23 +705,14 @@ def barplot_multiple_WSIs(clinic_df, save_pt):
     
     fig, ax1 = plt.subplots(figsize=(12, 8))
     
-    # Set the width of each bar (e.g., 0.9 instead of 0.8)
-    pivot_df.plot(kind='bar', stacked=True, color=sns.color_palette("Set3", n_colors=len(pivot_df.columns)), ax=ax1, width=0.9)
+    custom_colors = ["#262262", "#87ACC5", "#00A261", "#FFF200"] * (len(pivot_df.columns) // 4 + 1)
+    custom_colors = custom_colors[:len(pivot_df.columns)]
+    
+    pivot_df.plot(kind='bar', stacked=True, color=custom_colors, ax=ax1, width=0.9)
 
     ax1.set_xlabel('Patient ID (Ordered by Age)', fontsize=12)
     ax1.set_ylabel('Count of Predicted Ranks', fontsize=12)
-    
-    # Optional: Add secondary y-axis with age (commented out in your original code)
-    # ax2 = ax1.twinx()
-    # max_bar_height = pivot_df.sum(axis=1).max()
-    # scaled_ages = np.interp(ages, (ages.min(), ages.max()), (0, max_bar_height))
-    # ax2.plot(range(len(patient_ids_sorted)), scaled_ages, color='black', marker='o', linestyle='-', linewidth=2, markersize=6, label='Scaled Patient Age')
-    # ax2.set_ylabel('Age (Years)', fontsize=12, color='black')  # Label the secondary y-axis as "Age"
-    # age_ticks = np.linspace(0, len(ages) - 1, len(ages))  # Create tick positions
-    # ax2.set_yticks(np.linspace(0, max_bar_height, len(ages)))  # Adjust y-ticks
-    # ax2.set_yticklabels(ages)  # Use the original, non-normalized ages for tick labels
-
-    ax1.set_xticklabels(patient_ids_sorted, rotation=90)
+    ax1.set_xticklabels(patient_ids_sorted, fontsize=10, rotation=90)
     ax1.legend(title="Predicted Ranks", bbox_to_anchor=(1.05, 1), loc='upper left')
     ax1.set_title('Stacked Predicted Ranks by Patient ID (Ordered by Age)', fontsize=14)
     plt.tight_layout()

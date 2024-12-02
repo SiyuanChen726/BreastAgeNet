@@ -527,32 +527,31 @@ def test_model(model, dataloaders):
 
 
 
+def get_averaged_outputs(outputs):
+    # Convert 'branch_0', 'branch_1', 'branch_2' to numeric (if necessary)
+    outputs['branch_0'] = pd.to_numeric(outputs['branch_0'], errors='coerce')
+    outputs['branch_1'] = pd.to_numeric(outputs['branch_1'], errors='coerce')
+    outputs['branch_2'] = pd.to_numeric(outputs['branch_2'], errors='coerce')
+    
+    # Group by 'wsi_id' and calculate the mean for each branch across repeats
+    averaged_data = outputs.groupby('wsi_id')[['branch_0', 'branch_1', 'branch_2']].mean().reset_index()
+    averaged_data = pd.merge(outputs.loc[:, ['wsi_id', 'patient_id','cohort', 'source', 'age', 'age_group']], averaged_data, on='wsi_id').drop_duplicates()
+    
+    # Compute the sigmoid function manually (equivalent to expit)
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+    
+    # Apply sigmoid to the averaged values
+    averaged_data['sigmoid_0'] = sigmoid(averaged_data['branch_0'])  # Sigmoid for branch 0
+    averaged_data['sigmoid_1'] = sigmoid(averaged_data['branch_1'])  # Sigmoid for branch 1
+    averaged_data['sigmoid_2'] = sigmoid(averaged_data['branch_2'])  # Sigmoid for branch 2
+    
+    # Convert sigmoid values to binary (0 or 1)
+    averaged_data['binary_0'] = (averaged_data['sigmoid_0'] >= 0.5).astype(int)
+    averaged_data['binary_1'] = (averaged_data['sigmoid_1'] >= 0.5).astype(int)
+    averaged_data['binary_2'] = (averaged_data['sigmoid_2'] >= 0.5).astype(int)
+    
+    # Sum the binary predictions to get the final prediction
+    averaged_data['final_prediction'] = averaged_data[['binary_0', 'binary_1', 'binary_2']].sum(axis=1)
 
-
-
-# from scipy.special import expit  # For sigmoid function
-
-# # Step 1: Convert 'branch_0', 'branch_1', 'branch_2' to numeric (if necessary)
-# outputs_WSI['branch_0'] = pd.to_numeric(outputs_WSI['branch_0'], errors='coerce')
-# outputs_WSI['branch_1'] = pd.to_numeric(outputs_WSI['branch_1'], errors='coerce')
-# outputs_WSI['branch_2'] = pd.to_numeric(outputs_WSI['branch_2'], errors='coerce')
-
-# # Step 2: Group by 'wsi_id' and calculate the mean for each branch across repeats
-# averaged_data = outputs_WSI.groupby('wsi_id')[['branch_0', 'branch_1', 'branch_2']].mean().reset_index()
-
-# # Step 3: Apply sigmoid to the averaged values
-# averaged_data['sigmoid_0'] = expit(averaged_data['branch_0'])  # Sigmoid for branch 0
-# averaged_data['sigmoid_1'] = expit(averaged_data['branch_1'])  # Sigmoid for branch 1
-# averaged_data['sigmoid_2'] = expit(averaged_data['branch_2'])  # Sigmoid for branch 2
-
-# # Step 4: Convert sigmoid values to binary (0 or 1)
-# averaged_data['binary_0'] = (averaged_data['sigmoid_0'] >= 0.5).astype(int)
-# averaged_data['binary_1'] = (averaged_data['sigmoid_1'] >= 0.5).astype(int)
-# averaged_data['binary_2'] = (averaged_data['sigmoid_2'] >= 0.5).astype(int)
-
-# # Step 5: Sum the binary predictions to get the final prediction
-# averaged_data['final_prediction'] = averaged_data[['binary_0', 'binary_1', 'binary_2']].sum(axis=1)
-
-# # Display the results (only final prediction for simplicity)
-# print(averaged_data[['wsi_id', 'final_prediction']])
-
+    return averaged_data
