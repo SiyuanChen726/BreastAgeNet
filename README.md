@@ -71,7 +71,7 @@ cd BreastAgeNet
 conda env create -f environment.yml
 conda activate torch-env
 ```
-WSI data is organised as follows:
+WSI data is expected to be organised as follows:
 ```
 prj_BreastAgeNet/
 ├── CLINIC/clinicData_all.csv
