@@ -158,7 +158,7 @@ prj_BreastAgeNet/
 │   └── ...
 ```
 
-For Step 2. For visualisation, please refer to [notebook vis_tSNE](notebooks/vis_tSNE.ipynb) and [notebook vis_attention_heatmep](notebooks/vis_attention_heatmap.ipynb)
+For Step 2. For visualisation, please refer to [notebook vis_tSNE](notebooks/vis_tSNE.ipynb) and [notebook vis_attention_heatmap](notebooks/vis_attention_heatmap.ipynb)
 
 For Step 3. For external testing, please refer to [notebook inference](notebooks/inference.ipynb)
 
