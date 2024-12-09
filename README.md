@@ -24,7 +24,7 @@ The implementation can largely be broken down into the following steps:
 The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture ordinal age-related histological alterations. For the framework, the pre-processing includes: 
 
 #### Step 0.1: Patch preparation
-This step will perform foreground tissue detection, patch tessellation and tissue type classification. For more details, please check our [_NBT-Classifier_](https://github.com/SiyuanChen726/NBT-Classifier.git).
+This step will perform foreground tissue detection, patch tessellation and tissue type classification. For more details, please check our [_NBT-Classifier_].(https://github.com/SiyuanChen726/NBT-Classifier.git).
 
 #### Step 0.2: Feature extraction
 This step extracts visual features from randomly sampled patches using pre-trained image encoders. 
