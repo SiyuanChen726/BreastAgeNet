@@ -127,10 +127,14 @@ prj_BreastAgeNet/
 ├── Features/KHP
 │   ├── slide1
 │   │   ├── slide1_patch.csv
-│   │   ├── slide1_UNI.h5
-│   │   ├── slide1_gigapath.h5
-│   │   ├── slide1_iBOT.h5
-│   │   └── slide1_ResNet50.h5
+│   │   ├── slide1_UNI_augmentation.h5
+│   │   ├── slide1_gigapath_augmentation.h5
+│   │   ├── slide1_iBOT_augmentation.h5
+│   │   ├── slide1_ResNet50_augmentation.h5
+│   │   ├── slide1_UNI_reinhard.h5
+│   │   ├── slide1_gigapath_reinhard.h5
+│   │   ├── slide1_iBOT_reinhard.h5
+│   │   └── slide1_ResNet50_reinhard.h5
 │   └── ...
 ```
 
