@@ -29,7 +29,7 @@ This step will perform foreground tissue detection, patch tessellation and tissu
 #### Step 0.2: Feature extraction
 This step extracts visual features from randomly sampled patches using pre-trained image encoders. 
 <p align="center">
-    <img src="Docs/" width="80%">
+    <img src="Docs/BreastAgeNet.png" width="80%">
 </p>
 
 
