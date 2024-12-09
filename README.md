@@ -45,7 +45,7 @@ The training was implemented using different configurations through 5-fold cross
 #### Step 2.1 tSNE projection of the whole dataset
 **_BreastAgeNet_**  learns ageing-related microscopic patterns in a data-driven manner, using a multi-head self-attention mechanism to prioritize relevant patterns for accurate branch predictions. By integrating information from multiple branches, the model enhances the robustness of its predictions and provides deeper insights into the nuanced ageing-related changes in NBT.
 <p align="center">
-    <img src="Docs/BreastAgeNet_attention.png" width="80%">
+    <img src="Docs/BreastAgeNet_attention.png" width="100%">
 </p>
 
 #### Step 2.2 Attention heatmap for a single WSI
