@@ -51,7 +51,7 @@ The training was implemented using different configurations through 5-fold cross
 #### Step 2.2 Attention heatmap for a single WSI
 Moreover, **_BreastAgeNet_** provides attention heatmaps that can directly visualise ageing-related spatial heterogeneity across the tissue, with this variability showing strong associations with manually annotated, age-related lobule types. 
 <p align="center">
-    <img src="Docs/attention_lobuletype_association.png" width="100%">
+    <img src="Docs/lobule_type_attentions.png" width="100%">
 </p>
 
 
