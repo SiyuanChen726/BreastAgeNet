@@ -96,15 +96,13 @@ please check [HistoQC](https://github.com/choosehappy/HistoQC.git) and our [_NBT
 This step yields:
 ```
 prj_BreastAgeNet/
-├── WSIs
-├── QC/KHP
-│   ├── slide1/slide1_maskuse.png
+├── WSIs/                     # Raw WSIs
+├── QC/KHP/                   
+│   ├── slide1_maskuse.png    # Mask for foreground tissue regions 
 │   └── ...
-├── TC/KHP
-│   ├── slide1/slide1_TCmask.png
-│   └── ...
-├── Features/KHP
-│   ├── slide1/slide1_patch.csv
+├── Features/KHP/slide1/      
+│   ├── slide1_TCmask.png     # Tissue classification mask
+│   ├── slide1_patch.csv      # Patch-level metadata (tissue classification probabilities)
 │   └── ...
 ```
 Note: The slide1_patch.csv file contains important patch information, including coordinates on WSI, and confidence of containing epithelium contents
@@ -124,9 +122,9 @@ This step yields:
 prj_BreastAgeNet/
 ├── WSIs
 ├── QC
-├── TC
 ├── Features/KHP
 │   ├── slide1
+│   │   ├── slide1_TCmask.png 
 │   │   ├── slide1_patch.csv
 │   │   ├── slide1_UNI_augmentation.h5
 │   │   ├── slide1_gigapath_augmentation.h5
@@ -155,7 +153,6 @@ This step yields:
 prj_BreastAgeNet/
 ├── WSIs
 ├── QC
-├── TC
 ├── Features
 ├── models
 │   │──epi0.9_UNI_250_MultiHeadAttention_fold4_bestModel.pt
