@@ -6,7 +6,7 @@ https://github.com/mahmoodlab/CLAM/blob/master/models/model_clam.py
 
 import os
 from pathlib import Path
-from typing import Tuple, Any, Optional
+from typing import Tuple, Optional, List, Union
 import h5py
 import pandas as pd
 from tqdm import tqdm
@@ -16,6 +16,7 @@ from sklearn import metrics
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import train_test_split
 
 import torch.optim as optim
 from torch.nn import CrossEntropyLoss
@@ -23,104 +24,106 @@ from fastai.vision.all import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 
-
 def add_ageGroup(df):
-    """
-    Adds an 'age_group' column to the DataFrame based on the 'age' column.
-
-    Age groups are assigned as follows:
-    - 0: Age < 35
-    - 1: Age 35-45
-    - 2: Age 45-55
-    - 3: Age >= 55
-
-    Parameters:
-    - df (pandas.DataFrame): DataFrame containing an 'age' column.
-
-    Returns:
-    - pandas.DataFrame: Original DataFrame with an added 'age_group' column.
-    """
-    # Assign default group for age >= 55
     df['age_group'] = 3
-    
-    # Apply age group categorization with non-overlapping conditions
     df.loc[df['age'] < 35, 'age_group'] = 0
     df.loc[(df['age'] >= 35) & (df['age'] < 45), 'age_group'] = 1
     df.loc[(df['age'] >= 45) & (df['age'] < 55), 'age_group'] = 2
-
     return df
 
 
 
-
-
-
-# find .h5 files containing features extracted by pre-trained image encoders 
-def get_h5df(wsi_id, rootdir, model_name, train):
-    if train:
-        h5df = glob.glob(f"{rootdir}/{wsi_id}*/*{model_name}*augmentation.h5")[0]
-    else:
-        h5df = glob.glob(f"{rootdir}/{wsi_id}*/*{model_name}*raw.h5")[0]
-    return h5df
-
-       
-
-
-
-def feaBag_pt(patient_id, rootdir, model_name, train):
-    if train:
-        # feature_list = glob.glob(f"{rootdir}/{patient_id}*/*{model_name}*reinhard.h5")
-        feature_list = glob.glob(f"{rootdir}/{patient_id}*/*{model_name}*augmentation.h5")
-    else:
-        feature_list = glob.glob(f"{rootdir}/{patient_id}*/*{model_name}*raw.h5")
-    index = random.randint(0, len(feature_list)-1)
-    bag_pt = feature_list[index]
-    return bag_pt
-
-
-
-
-def split_data(clinic_df, rootdir, patientID, yTrue, train_index, test_index, fold_pt):
-    model_name = os.path.basename(fold_pt).split("_")[0]
+def get_data(config): 
+    clinic_df = pd.read_csv(config["clinic_path"])
+    clinic_df = add_ageGroup(clinic_df)
     
+    wsi_ids = []
+    for wsi_id in clinic_df["wsi_id"]:
+        # Look for files that match the pattern
+        file = list(glob.glob(f'{config["FEATURES"]}/{wsi_id}*/*{config["model_name"]}*{config["stainFunc"]}.h5'))
+        if file:  # Check if file list is not empty
+            wsi_ids.append(wsi_id)
+    
+    clinic_df = clinic_df[clinic_df["wsi_id"].isin(wsi_ids)]
+    print("Filtered DataFrame length:", len(clinic_df))
+    print("Unique age groups and counts:", np.unique(clinic_df["age_group"], return_counts=True))
+    
+    valid_wsi = []
+    valid_patches = []
+    for wsi_id in clinic_df.wsi_id.values:
+        fea_pt = glob.glob(f'{config["FEATURES"]}/{wsi_id}*/*{config["model_name"]}*{config["stainFunc"]}.h5')[0] 
+        with h5py.File(fea_pt, "r") as file:
+            bag = np.array(file["embeddings"])
+            bag = np.squeeze(bag)
+            img_id = np.array(file["patch_id"])
+        img_id = [i.decode("utf-8") for i in img_id]
+        bag_df = pd.DataFrame(bag)
+        bag_df.index = img_id
+    
+        csv_pt = fea_pt.split('_bagFeature_')[0]+ '_patch.csv'
+        df = pd.read_csv(csv_pt)
+    
+        valid_id = list(df['patch_id'][df['TC_epi'] > config["TC_epi"]])
+        valid_id = list(set(valid_id) & set(bag_df.index))
+        valid_patches.extend(valid_id)
+        if valid_id:
+            valid_wsi.extend([wsi_id] * len(valid_id))
+    
+    print(len(np.unique(valid_wsi)))
+    print(len(valid_patches))
+    a, b = np.unique(valid_wsi, return_counts=True)
+    # sorted_zip = sorted(zip(b, a))
+    # a = [i[1] for i in sorted_zip]
+    # b = [i[0] for i in sorted_zip]
+    # plt.plot(b , marker='o', markersize=1)
+    # plt.title('Line Plot of Values')
+    # plt.xticks(rotation=90, fontsize=1)
+    # plt.show()
+    # print(b)
+    filtered_a = [i for i, count in zip(a, b) if count >= 5]
+    print(len(filtered_a))
+    
+    clinic_df = clinic_df[clinic_df["patient_id"].isin(filtered_a)]
+    print("Filtered DataFrame length:", len(clinic_df))
+    print("Unique age groups and counts:", np.unique(clinic_df["age_group"], return_counts=True))
+    
+    print(len(valid_patches))
+    valid_patches = [i for i in valid_patches if i.split("_")[0] in filtered_a]
+    print(len(valid_patches))
+
+    return clinic_df, valid_patches
+    
+
+
+def split_data_per_fold(clinic_df, patientID, truelabels, train_index, test_index, FEATURES, model_name, stainFunc):
     print('preparing train/test patients, 0.8/0.2')
-    # test data
     test_patients = patientID[test_index]
     test_data = clinic_df[clinic_df['patient_id'].isin(test_patients)]
     test_data.reset_index(inplace=True, drop=True)
-    test_data.to_csv(fold_pt.replace('train', 'test'), index = False)
-    print(f"{fold_pt.replace('train', 'test')} saved!")
-    
-    feaBag_pts = [feaBag_pt(patient_id, rootdir, model_name, train=False) for patient_id in list(test_data['patient_id'])]
+    feaBag_pts = [glob.glob(f"{FEATURES}/{patient_id}*/*{model_name}*{stainFunc}.h5")[0] for patient_id in list(test_data['patient_id'])]
     test_data = test_data.copy()
-    test_data['feaBag_pt'] = [Path(i) for i in feaBag_pts]
-    
+    test_data['h5df'] = [Path(i) for i in feaBag_pts]
+        
     print('preparing train/val patients, 0.8/0.2')
     train_patients = patientID[train_index]
     train_data = clinic_df[clinic_df['patient_id'].isin(train_patients)]
     train_data.reset_index(inplace=True, drop=True)
     
     val_data = train_data.groupby('age_group', group_keys=False).apply(lambda x: x.sample(frac=0.2))
-    feaBag_pts = [feaBag_pt(patient_id, rootdir, model_name, train=False) for patient_id in list(val_data['patient_id'])]
-    val_data['feaBag_pt'] = [Path(i) for i in feaBag_pts]
+    feaBag_pts = [glob.glob(f"{FEATURES}/{patient_id}*/*{model_name}*{stainFunc}.h5")[0] for patient_id in list(val_data['patient_id'])]
+    val_data['h5df'] = [Path(i) for i in feaBag_pts]
     val_data['is_valid'] = True
-    
+        
     train_data = train_data.copy()
     train_data = train_data.drop(train_data.loc[train_data['patient_id'].isin(list(val_data['patient_id']))].index).reset_index() # epithelium
-    feaBag_pts = [feaBag_pt(patient_id, rootdir, model_name, train=True) for patient_id in list(train_data['patient_id'])]
-    train_data['feaBag_pt'] = [Path(i) for i in feaBag_pts]
+    feaBag_pts = [glob.glob(f"{FEATURES}/{patient_id}*/*{model_name}*{stainFunc}.h5")[0] for patient_id in list(train_data['patient_id'])]
+    train_data['h5df'] = [Path(i) for i in feaBag_pts]
     train_data['is_valid'] = False
-    
-    train_data = pd.concat([train_data, val_data], axis=0)
-    train_data.to_csv(fold_pt, index = False)
-    print(f'{fold_pt} saved!')
- 
+
     return train_data, val_data, test_data
 
 
@@ -182,25 +185,50 @@ class MILBagTransform(Transform):
 
 
 
-######### image encoders
-def get_dim_input(model_name):
-    if model_name == 'UNI':
-        dim_input = 1024
-    elif model_name == 'iBOT':
-        dim_input = 768
-    elif model_name == 'gigapath':
-        dim_input = 1536
-    elif model_name == 'resnet50':
-        dim_input = 2048
-    return dim_input
+class MILBagTransform(Transform):
+    def __init__(self, h5df_files, bag_size=250, valid_patches=None):
+        self.h5df_files = h5df_files
+        self.bag_size = bag_size
+        self.valid_patches = valid_patches
+        self.items = {f: self._draw(f) for f in h5df_files}
+        
+    def encodes(self, f: Path):
+        patch_ids, bag_df = self.items.get(f, self._draw(f))
+        return patch_ids, bag_df  # Return both patch_ids and embeddings (bag_df)
+        
+    def _sample_with_distinct_or_duplicate(self, population, k):
+        if len(population) >= k:
+            return random.sample(population, k)  # Sample without replacement
+        else:
+            sampled_items = random.sample(population, len(population))
+            remaining_samples = random.choices(population, k=k-len(sampled_items))
+            return sampled_items + remaining_samples
+            
+    def _draw(self, f: Path):
+        with h5py.File(f, "r") as file:
+            bag = np.array(file["embeddings"])
+            img_id = np.array(file["patch_id"])
+        img_id = [i.decode("utf-8") if isinstance(i, bytes) else i for i in img_id]
+        bag_df = pd.DataFrame(bag)
+        bag_df.index = img_id
+        
+        if self.valid_patches is not None:
+            patch_ids = np.intersect1d(self.valid_patches, list(bag_df.index))
+        else:
+            patch_ids = list(bag_df.index)
+            
+        patch_ids = list(np.unique(patch_ids))
+        sampled_items = self._sample_with_distinct_or_duplicate(patch_ids, self.bag_size)
+        bag_df = bag_df.loc[sampled_items, :]
+        bag_df = np.squeeze(np.array(bag_df))
+        bag_df = torch.from_numpy(bag_df)
+        
+        return sampled_items, bag_df
+        
 
 
-
-######### attention modules
 def Attention(n_in, n_latent: Optional[int] = None) -> nn.Module:
-    
     n_latent = n_latent or (n_in +1) // 2
-    
     return nn.Sequential(
         nn.Linear(n_in, n_latent),
         nn.Tanh(),
@@ -210,11 +238,9 @@ def Attention(n_in, n_latent: Optional[int] = None) -> nn.Module:
 
 
 class GatedAttention(nn.Module):
-
     def __init__(self, n_in, n_latent: Optional[int] = None) -> None:
         super().__init__()
         n_latent = n_latent or (n_in + 1) // 2
-
         self.fc1 = nn.Linear(n_in, n_latent)
         self.gate = nn.Linear(n_in, n_latent)
         self.fc2 = nn.Linear(n_latent, 1)
@@ -223,44 +249,52 @@ class GatedAttention(nn.Module):
         return self.fc2(torch.tanh(self.fc1(h)) * torch.sigmoid(self.gate(h)))
 
 
+
+
 class MultiHeadAttention(nn.Module):
-    def __init__(self, n_in, n_heads, n_latent: Optional[int] = None, dropout: float = 0.1) -> None:
+    def __init__(self, n_in, n_heads, n_latent: Optional[int] = None, dropout: float = 0.125) -> None:
         super().__init__()
         self.n_heads = n_heads
         n_latent = n_latent or n_in
         self.d_k = n_latent // n_heads
         self.q_proj = nn.Linear(n_in, n_latent)
         self.k_proj = nn.Linear(n_in, n_latent)
-        self.fc = nn.Linear(n_heads, 1)  
+        self.fc = nn.Linear(n_heads, 1)
         self.dropout = nn.Dropout(dropout)
         self.split_heads = lambda x: x.view(x.shape[0], x.shape[1], self.n_heads, self.d_k).transpose(1, 2)
-
+    
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        Q = torch.tanh(self.q_proj(x))  # Project Q
-        K = torch.sigmoid(self.k_proj(x))  # Project K
-        
+        Q = self.q_proj(x)  # Project Q
+        K = self.k_proj(x)  # Project K
+        # Q = torch.tanh(self.q_proj(x))  # Project Q
+        # K = torch.sigmoid(self.k_proj(x))  # Project K
         Q = self.split_heads(Q)  # [batch_size, n_heads, bag_size, d_k]
         K = self.split_heads(K)  # [batch_size, n_heads, bag_size, d_k]
-
-        # Calculate attention scores
-        attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.d_k ** 0.5)  # Scaled dot-product
-        attention_weights = F.softmax(attention_scores, dim=-1)  # Softmax to get weights
-        attention_weights = self.dropout(attention_weights)  # Apply dropout for regularization
-        
-        # Aggregate attention weights
+        attention_weights = torch.matmul(Q, K.transpose(-2, -1)) / (self.d_k ** 0.5)  # Scaled dot-product with temperature
         attention_output = attention_weights.mean(dim=-2)  # Aggregate across bag_size
-       
         attention_output = attention_output.transpose(1, 2).contiguous().view(x.shape[0], x.shape[1], -1)  # Flatten heads
-      
-        output = self.fc(attention_output)  # Final linear layer for output
-
+        attention_output = self.dropout(attention_output)  
+        output = self.fc(attention_output)  
         return output
+
+
+
+def get_input_dim(model_name):
+    if model_name == 'UNI':
+        input_dim = 1024
+    elif model_name == 'iBOT':
+        input_dim = 768
+    elif model_name == 'gigapath':
+        input_dim = 1536
+    elif model_name == 'resnet50':
+        input_dim = 2048
+    return input_dim
 
 
 
 
 class BreastAgeNet(nn.Module):
-    def __init__(self, n_feats, attention, n_classes, n_heads=8, n_latent=512, embed_attn=False, temperature=None):
+    def __init__(self, n_feats, attention, n_classes, n_heads=8, n_latent=512, attn_dropout=0.5, temperature=0.5, embed_attn=False):
         super(BreastAgeNet, self).__init__()
         self.n_classes = n_classes
         self.encoder = nn.Sequential(
@@ -268,16 +302,12 @@ class BreastAgeNet(nn.Module):
             nn.ReLU(),
             nn.Dropout(0.5)
         )
-        
-        # Choose the attention mechanism for each class
         if attention == 'MultiHeadAttention':
-            self.attentions = nn.ModuleList([MultiHeadAttention(n_latent, n_heads) for _ in range(n_classes)])
+            self.attentions = nn.ModuleList([MultiHeadAttention(n_latent, n_heads, dropout = attn_dropout) for _ in range(n_classes)])
         elif attention == 'Attention':
             self.attentions = nn.ModuleList([Attention(n_latent) for _ in range(n_classes)])
         elif attention == 'GatedAttention':
             self.attentions = nn.ModuleList([GatedAttention(n_latent) for _ in range(n_classes)])
-        
-        # Bag classifiers for each class
         self.classifiers = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(n_latent, n_latent // 2),
@@ -287,202 +317,183 @@ class BreastAgeNet(nn.Module):
             ) for _ in range(n_classes)
         ])
         self.embed_attn = embed_attn
-        self.temperature = temperature
+        self.temperature = temperature  
     
     def forward(self, bags):
-        bags = bags.to(next(self.parameters()).device)  # Ensure bags are on the correct device
-        embeddings = self.encoder(bags)  # [batch_size, bag_size, n_latent]
-
+        bags = bags.to(next(self.parameters()).device)  
+        embeddings = self.encoder(bags) 
         logits = []
         attns = []
         for i in range(self.n_classes):
-            # Get attention scores for the current class
-            attention_scores = self.attentions[i](embeddings)  # [batch_size, bag_size, 1]
-            
-            if self.temperature is not None:  # Adjust based on experimentation
-                attention_scores = attention_scores / temperature
-
+            attention_scores = self.attentions[i](embeddings) 
+            attention_scores = attention_scores / self.temperature
             attns.append(attention_scores)
-            A = F.softmax(attention_scores, dim=1)            
-            # Apply weighted sum for each instance in the bag
-            M = torch.bmm(A.transpose(1, 2), embeddings)  # [batch_size, 1, n_latent]
-            M = M.squeeze(1)  # Ensure we only remove the bag_size dimension
             
-            # Pass through classifier to get logits for this class
+            A = F.softmax(attention_scores, dim=1)            
+            M = torch.bmm(A.transpose(1, 2), embeddings)  
+            M = M.squeeze(1) 
             logit = self.classifiers[i](M)  # [batch_size, 1]
             logits.append(logit)
         
-        # Stack logits along a new dimension for consistent output shape
         logits = torch.cat(logits, dim=1)  # [batch_size, n_classes]
-
-        # Concatenate attention scores across classes along dim=2
         attns = torch.cat(attns, dim=2)  # [batch_size, bag_size, n_classes]
 
-        # Return embeddings and attention weights if requested
         if self.embed_attn:
             return logits, embeddings, attns  # logits: [batch_size, n_classes], embeddings: [batch_size, bag_size, n_latent], attns: [batch_size, bag_size, n_classes]
         else:
-            return logits  # [batch_size, n_classes]
-
-
+            return logits  
             
 
-#### Loss function
+
+def get_sample_weights(train_df):
+    class_counts = train_df["age_group"].value_counts().sort_index()
+    total = len(train_df)
+    counts = [class_counts.get(i, 0) for i in range(len(class_counts))]
+    
+    a, b, c, d = counts if len(counts) == 4 else [0]*4
+    return {
+        "0": a / total,
+        "1": b / total,
+        "2": c / total,
+        "3": d / total
+    }
+
+
+
+def get_sample_weights(train_df):
+    class_counts = train_df["age_group"].value_counts().sort_index()
+    counts = [class_counts.get(i, 0) for i in range(4)]
+    counts = [max(c, 1) for c in counts]  # Ensure no division by zero
+    inverse_freqs = [1.0 / c for c in counts]
+    total_weight = sum(inverse_freqs)
+    normalized_weights = [w / total_weight for w in inverse_freqs]
+    return [normalized_weights[i] for i in range(4)]
+
+
+
 class OrdinalCrossEntropyLoss(nn.Module):
     def __init__(self, n_classes, weights=None):
-        super(OrdinalCrossEntropyLoss, self).__init__()
+        super().__init__()
         self.num_classes = n_classes
-        self.bce = nn.BCEWithLogitsLoss(reduction='none')  
+        self.bce = nn.BCEWithLogitsLoss(reduction="none")
         self.weights = weights
-
+        self.ordinals = torch.arange(n_classes)
+        
     def forward(self, logits, labels):
-        # labels: from [1] to [1,1,1]
-        labels_expanded = labels.unsqueeze(1).repeat(1, self.num_classes) 
-        # Compare [1,1,1] > tensor([0, 1, 2]) --> [True, False, False]  --> [1, 0, 0]
-        binary_labels = (labels_expanded > torch.arange(self.num_classes).to(labels.device)).float() 
-        # Compute the BCE loss for each class: [0.98, 0.02, 0.02] vs [1, 0, 0]
-        loss = self.bce(logits, binary_labels)
-
-        # If weights are provided, apply them (per sample, per class)
+        device = logits.device
+        labels_expanded = labels.unsqueeze(1).expand(-1, self.num_classes)
+        ordinal_labels = (labels_expanded > self.ordinals.to(device)).float()
+        loss = self.bce(logits, ordinal_labels)
         if self.weights is not None:
-            loss = loss * self.weights
-            return loss.mean()   # Apply weights based on true class
-        else:
-            # Return the average loss
-            return loss.mean()  # Averaging over the batch
+            sample_weights = torch.tensor([self.weights[l.item()] for l in labels], device=device).unsqueeze(1)
+            loss = loss * sample_weights
+        return loss.mean()
 
-
-
+        
 
 class EarlyStopping:
-    def __init__(self, patience = 20, stop_epoch = 50, verbose=False):
-
+    def __init__(self, patience=5, delta=0.0):
         self.patience = patience
-        self.stop_epoch = stop_epoch
-        self.verbose = verbose
-        self.counter = 0
-        self.best_score = None
-        self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.delta = delta  # Threshold for improvement
+        self.counter = 0  # To count the number of epochs without improvement
+        self.best_score = None  # Best validation loss seen so far
+        self.early_stop = False  # Flag to indicate whether training should stop
 
-    def __call__(self, epoch, val_loss, model, ckpt_name = 'checkpoint.pt'):
-
-        score = -val_loss
-
+    def __call__(self, epoch, val_loss, model, ckpt_name):
         if self.best_score is None:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model, ckpt_name)
-        elif score < self.best_score:
-            self.counter += 1
-            print(f'\nEarlyStopping counter: {self.counter} out of {self.patience}')
-            if self.counter >= self.patience and epoch > self.stop_epoch:
-                self.early_stop = True
+            # Initialize best_score with the first validation loss
+            self.best_score = val_loss
+            torch.save(model.state_dict(), ckpt_name)
+        elif val_loss < self.best_score - self.delta:
+            # If the current loss is better than the previous best by at least delta
+            self.best_score = val_loss
+            torch.save(model.state_dict(), ckpt_name)  # Save the best model
+            self.counter = 0  # Reset the counter if there's improvement
         else:
-            self.best_score = score
-            self.save_checkpoint(val_loss, model, ckpt_name)
-            self.counter = 0
-
-    def save_checkpoint(self, val_loss, model, ckpt_name):
-        if self.verbose:
-            print(f'\nValidation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
-        torch.save(model.state_dict(), ckpt_name)
-        self.val_loss_min = val_loss    
+            self.counter += 1  # Increment the counter if no improvement
+            if self.counter >= self.patience:
+                # If we have not seen improvement for `patience` epochs, stop training
+                self.early_stop = True
 
 
 
-        
-
-#### train on one step, validate on one epoch deciding whether early stopping
-def train_model(model, trainLoaders, valLoaders, optimizer, criterion,
-                patience, minEpochTrain, max_epochs, ckpt_name):
-    since = time.time()
+def run_one_step(model, inputs, labels, criterion, optimizer, phase='train'):
+    optimizer.zero_grad()  
+    logits = model(inputs) 
+    loss = criterion(logits, labels)  
     
-    train_acc_history = []
-    train_loss_history = []
-    val_acc_history = []
-    val_loss_history = []
-    early_stopping = EarlyStopping(patience=patience, stop_epoch=minEpochTrain, verbose=True)
+    if phase == 'train':
+        loss.backward()  
+        optimizer.step()  
+    return logits, loss
 
-    for epoch in range(max_epochs):
-        print(f"{epoch}/{max_epochs-1} epoch")
-        print('\nTraining\n')
-        phase = 'train'
-        model.train()
-        run_loss = 0.0
-        run_MAE = 0.0
-        
-        for inputs,labels in tqdm(trainLoaders): # inputs = (emeddings, patch lens)
-            optimizer.zero_grad()
-            with torch.set_grad_enabled(True):
-                logits = model(inputs)
-                loss = criterion(logits, labels)  # BCEWithLogitsLoss expects logits as inputs
-                
-                if phase == 'train':
-                    loss.backward()
-                    optimizer.step()
 
-                run_loss += loss.sum().item()  # Sum across the batch and accumulate
-                # Compute MAE
-                probs = torch.sigmoid(logits)  # Shape: [batch_size, n_classes]
-                binary_predictions = (probs > 0.5).int()  # Shape: [batch_size, n_classes]
-                predicted_ranks = binary_predictions.sum(dim=1)  # Shape: [batch_size]
-                true_ranks = labels.sum(dim=1)
-                run_MAE += torch.abs(true_ranks - predicted_ranks).float().mean()
-      
-        epoch_loss = run_loss / len(trainLoaders.dataset)
-        epoch_acc = run_MAE.item() / len(trainLoaders.dataset)
-        train_acc_history.append(epoch_acc)
-        train_loss_history.append(epoch_loss)
-        print(f'\n {phase} Loss: {np.round(epoch_loss, 4)}  MAE: {np.round(epoch_acc, 4)}')
 
-        if valLoaders:
-            print('Validation....\n')
-            phase = 'val'
-            model.eval()
-            
-            run_loss = 0.0
-            run_MAE = 0.0
-            for inputs, labels in tqdm(valLoaders):
-                with torch.set_grad_enabled(phase=='train'):
-                    logits = model(inputs)
-                    loss = criterion(logits, labels) 
-                    run_loss += loss.sum().item()  # Sum across the batch and accumulate
-                    # Compute MAE
-                    probs = torch.sigmoid(logits)  # Shape: [batch_size, n_classes]
-                    binary_predictions = (probs > 0.5).int()  # Shape: [batch_size, n_classes]
-                    predicted_ranks = binary_predictions.sum(dim=1)  # Shape: [batch_size]
-                    true_ranks = labels.sum(dim=1)
-                    run_MAE += torch.abs(true_ranks - predicted_ranks).float().mean()
+def compute_mae(logits, labels):    
+    probs = torch.sigmoid(logits) 
+    binary_predictions = (probs > 0.5).int() 
+    predicted_ranks = binary_predictions.sum(dim=1) 
+    return torch.abs(labels - predicted_ranks).float().mean()
 
-            val_loss = run_loss / len(valLoaders.dataset)
-            val_acc = run_MAE.item() / len(valLoaders.dataset)
-            val_loss_history.append(val_loss)     
-            val_acc_history.append(val_acc) 
-            print(f'\n {phase} Loss: {np.round(val_loss, 4)}   MAE: {np.round(val_acc, 4)}')
-            
-            early_stopping(epoch, val_loss, model, ckpt_name=ckpt_name)
-            if early_stopping.early_stop:
-                print('-'*30)
-                print(f'Training stop, the validation loss did not drop for {patience} epochs!!!')
-                print('-'*30)
-                break
-            print('-' * 30)
 
-    time_elapsed = time.time() - since
-    print(f'Training completed in {time_elapsed//60:.0f}m {time_elapsed%60:.0f}s')
-    return train_loss_history, train_acc_history, val_loss_history, val_acc_history
+
+def run_one_epoch(model, trainLoaders, valLoaders, criterion, optimizer, train_loss_history, train_acc_history, val_loss_history, val_acc_history, early_stopping, epoch, ckpt_name):
+    # Training phase
+    print('Training phase\n')
+    model.train()  # Set model to training mode
+    running_loss = 0.0
+    running_mae = 0.0
+
+    for (_, inputs), labels in tqdm(trainLoaders): 
+        logits, loss = run_one_step(model, inputs, labels, criterion, optimizer, phase='train')
+        mae = compute_mae(logits, labels)  # Calculate Mean Absolute Error
+        running_loss += loss.item()
+        running_mae += mae.item()
+
+    epoch_loss = running_loss / len(trainLoaders)
+    train_loss_history.append(epoch_loss)
+    epoch_acc = running_mae / len(trainLoaders)
+    train_acc_history.append(epoch_acc)
+
+    print(f'\nTraining Loss: {np.round(epoch_loss, 4)}  MAE: {np.round(epoch_acc, 4)}')
+
+    # Validation phase
+    if valLoaders:
+        print('Validation phase\n')
+        model.eval()  # Set model to evaluation mode
+        running_loss = 0.0
+        running_mae = 0.0
+
+        with torch.no_grad():  # Disable gradient calculation for validation
+            for (_, inputs), labels in tqdm(valLoaders):
+                logits, loss = run_one_step(model, inputs, labels, criterion, optimizer, phase='val')
+                mae = compute_mae(logits, labels)
+                running_loss += loss.item()
+                running_mae += mae.item()
+
+        val_loss = running_loss / len(valLoaders)
+        val_loss_history.append(val_loss)
+        val_acc = running_mae / len(valLoaders)
+        val_acc_history.append(val_acc)
+
+        print(f'Validation Loss: {np.round(val_loss, 4)}   MAE: {np.round(val_acc, 4)}')
+
+        # Check for early stopping
+        early_stopping(epoch, val_loss, model, ckpt_name=ckpt_name)
+        if early_stopping.early_stop:
+            print(f'Early stopping: validation loss did not improve for {early_stopping.patience} epochs!')
+            return True  # Exit early if stopping condition is met
+
+    return False  # Continue if early stopping was not triggered
+
 
 
 
 
 def plot_training(train_loss_history, val_loss_history, train_acc_history, val_acc_history, save_pt=None):
-    
     epochs = range(1, len(train_loss_history) + 1) 
     
-    # Create a figure with subplots
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-    
-    # Plot Loss
     ax1.plot(epochs, train_loss_history, label='Training Loss', color='blue')
     ax1.plot(epochs, val_loss_history, label='Validation Loss', color='orange')
     ax1.set_title('Training and Validation Loss')
@@ -491,7 +502,6 @@ def plot_training(train_loss_history, val_loss_history, train_acc_history, val_a
     ax1.legend()
     ax1.grid()
     
-    # Plot Accuracy
     ax2.plot(epochs, train_acc_history, label='Training Accuracy', color='green')
     ax2.plot(epochs, val_acc_history, label='Validation Accuracy', color='red')
     ax2.set_title('Training and Validation Accuracy')
@@ -500,7 +510,6 @@ def plot_training(train_loss_history, val_loss_history, train_acc_history, val_a
     ax2.legend()
     ax2.grid()
     
-    # Show plots
     plt.tight_layout()
     if save_pt is not None:
         plt.savefig(save_pt)
@@ -524,6 +533,130 @@ def test_model(model, dataloaders):
             predicted_ranks = predicted_ranks + ranks.tolist()
     
     return predicted_ranks
+
+
+
+
+
+def train_CV(config):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+    
+    clinic_df, valid_patches = get_data(config)
+    
+    patientID = clinic_df["patient_id"].values
+    truelabels = clinic_df["age_group"].values
+    kf = StratifiedKFold(n_splits=5, random_state=0, shuffle=True)
+    kf.get_n_splits(patientID, truelabels)
+    
+    for foldcounter, (train_index, test_index) in enumerate(kf.split(patientID, truelabels)):
+        ckpt_name = f'{config["resFolder"]}/BreastAgeNet_epi{config["TC_epi"]}_{config["model_name"]}_{config["bag_size"]}_{config["attention"]}_fold{foldcounter}_best.pt'
+        train_df, val_df, test_df = split_data_per_fold(clinic_df, patientID, truelabels, train_index, test_index, config["FEATURES"], config["model_name"], config["stainFunc"])
+        
+        dblock = DataBlock(blocks = (TransformBlock, CategoryBlock),
+                           get_x = ColReader('h5df'),
+                           get_y = ColReader('age_group'),
+                           splitter = ColSplitter('is_valid'),
+                           item_tfms = MILBagTransform(train_df.h5df, config["bag_size"], valid_patches=valid_patches))
+    
+        dls = dblock.dataloaders(train_df, bs = config["batch_size"])
+        trainLoaders = dls.train
+        valLoaders = dls.valid
+        
+        (patch_ids, embeds), labels = next(iter(trainLoaders))
+        patch_ids = np.array(patch_ids)  
+        patch_ids = np.transpose(patch_ids)  
+        print(patch_ids.shape, embeds.shape, labels.shape)
+    
+        input_dim = get_input_dim(config["model_name"])
+        model = BreastAgeNet(input_dim, config["attention"], config["n_classes"], config["n_heads"], config["n_latent"], config["attn_dropout"], config["attn_temp"], embed_attn=False).to(device)
+        criterion = OrdinalCrossEntropyLoss(n_classes=config["n_classes"], weights=get_sample_weights(train_df))
+        criterion.to(device)
+        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config["lr"], weight_decay=config["weight_decay"])
+        early_stopping = EarlyStopping(patience=config["patience"], stop_epoch=config["max_epochs"], verbose=True)
+    
+        since = time.time()
+        train_loss_history = []
+        train_acc_history = []
+        val_loss_history = []
+        val_acc_history = []
+        
+        for epoch in range(config["max_epochs"]):
+            print(f'Epoch {epoch}/{config["max_epochs"]-1}\n')
+            early_stop = run_one_epoch(
+                model, trainLoaders, valLoaders, criterion, optimizer, 
+                train_loss_history, train_acc_history, val_loss_history, 
+                val_acc_history, early_stopping, epoch, ckpt_name
+            )
+            if early_stop:
+                break
+    
+        time_elapsed = time.time() - since
+        print(f'Training completed in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
+        
+        plot_training(train_loss_history, val_loss_history, train_acc_history, val_acc_history, save_pt=ckpt_name.replace(".pt", ".png"))
+        
+        testLoader = dls.test_dl(test_df)
+        predicted_ranks = test_model(model, testLoader)
+        MAE = np.abs(test_df["age_group"].values - predicted_ranks).mean()
+        print(f"Testing MAE is: {MAE}")
+
+
+
+
+def train_full(config):
+    ckpt_name = f'{config["resFolder"]}/BreastAgeNet_epi{config["TC_epi"]}_{config["model_name"]}_{config["bag_size"]}_{config["attention"]}_full_best.pt'
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+    
+    train_df, valid_patches = get_data(config)
+    feaBag_pts = [glob.glob(f'{config["FEATURES"]}/{patient_id}*/*{config["model_name"]}*{config["stainFunc"]}.h5')[0] for patient_id in list(train_df['patient_id'])]
+    train_df['h5df'] = [Path(i) for i in feaBag_pts]
+    train_ids, valid_ids = train_test_split(train_df['patient_id'].unique(), test_size=0.1, random_state=42)
+    train_df['is_valid'] = train_df['patient_id'].isin(valid_ids)
+    dblock = DataBlock(blocks = (TransformBlock, CategoryBlock),
+                       get_x = ColReader('h5df'),
+                       get_y = ColReader('age_group'),
+                       splitter = ColSplitter('is_valid'),
+                       item_tfms = MILBagTransform(train_df.h5df, config["bag_size"], valid_patches=valid_patches))
+    dls = dblock.dataloaders(train_df, bs = config["batch_size"])
+    trainLoaders = dls.train
+    valLoaders = dls.valid
+
+    (patch_ids, embeds), labels = next(iter(trainLoaders))
+    patch_ids = np.array(patch_ids)  
+    patch_ids = np.transpose(patch_ids)  
+    print(patch_ids.shape, embeds.shape, labels.shape)
+
+    input_dim = get_input_dim(config["model_name"])
+    model = BreastAgeNet(input_dim, config["attention"], config["n_classes"], config["n_heads"], config["n_latent"], config["attn_dropout"], config["attn_temp"], embed_attn=False).to(device)
+    criterion = OrdinalCrossEntropyLoss(n_classes=config["n_classes"], weights=get_sample_weights(train_df))
+    criterion.to(device)
+    optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config["lr"], weight_decay=config["weight_decay"])
+    early_stopping = EarlyStopping(patience=config["patience"])
+
+    since = time.time()
+    train_loss_history = []
+    train_acc_history = []
+    val_loss_history = []
+    val_acc_history = []
+
+    for epoch in range(config["max_epochs"]):
+        print(f'Epoch {epoch}/{config["max_epochs"]-1}\n')
+        early_stop = run_one_epoch(
+            model, trainLoaders, valLoaders, criterion, optimizer, 
+            train_loss_history, train_acc_history, val_loss_history, 
+            val_acc_history, early_stopping, epoch, ckpt_name
+        )
+        if early_stop:
+            break
+
+    time_elapsed = time.time() - since
+    print(f'Training completed in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
+    
+    plot_training(train_loss_history, val_loss_history, train_acc_history, val_acc_history, save_pt=ckpt_name.replace(".pt", ".png"))
+
 
 
 
@@ -555,3 +688,5 @@ def get_averaged_outputs(outputs):
     averaged_data['final_prediction'] = averaged_data[['binary_0', 'binary_1', 'binary_2']].sum(axis=1)
 
     return averaged_data
+
+
