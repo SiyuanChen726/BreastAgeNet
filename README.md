@@ -107,6 +107,7 @@ Step 2.2 Attention heatmap for a single WSI
 Moreover, **_BreastAgeNet_** provides attention heatmaps that can directly visualise ageing-related spatial heterogeneity across the tissue, with this variability showing strong associations with manually annotated, age-related lobule types. Please refer to [notebook vis_attention_heatmap](notebooks/vis_attention_heatmap.ipynb)
 
 
+
 ### Step 3. External testing
 In the context of ordinal classification, where errors between adjacent classes are considered less severe than those between more distant classes, **_BreastAgeNet_** demonstrated robust performance on WSIs of NBT derived from reduction mammoplasties, with only 9% severe misclassification. With its substantiated ability to model ageing trajectories in NBT, <i>BreastAgeNet</i> has revealed deviations between expected (chronological) and observed (predicted) tissue ageing in high-risk NBT from _gBRCA1/2_ mutation carriers or breast cancer patients. For this, please implement the following:
 
