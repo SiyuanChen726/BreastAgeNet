@@ -31,48 +31,69 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 
-def branch_ROC(df, branch = 0, class_name = ">35y", save_pt=None):
+
+
+
+def vis_branch_predictions(df, figsize=(6, 6), save_pt=None):
+    fig, axes = plt.subplots(1, 3, figsize=figsize)  # 3 rows, 1 column
+    
+    heatmap_data1 = df[["sigmoid_0", "sigmoid_1", "sigmoid_2"]]
+    sns.heatmap(heatmap_data1, cmap="coolwarm", cbar=True, xticklabels=True, yticklabels=False, linewidths=0.5, linecolor='gray', ax=axes[0])
+    axes[0].set_xlabel("Sigmoid Categories")
+    axes[0].set_title("Heatmap for \n Sigmoid Predictions", fontsize=10)
+    
+    heatmap_data2 = df[["binary_0", "binary_1", "binary_2"]]
+    sns.heatmap(heatmap_data2, cmap="binary", cbar=False, xticklabels=True, yticklabels=False, linewidths=0.5, linecolor='gray', ax=axes[1])
+    axes[1].set_xlabel("Binary Categories")
+    axes[1].set_title("Heatmap for \n Binary Predictions", fontsize=10)
+    
+    heatmap_data3 = df[["age_group"]]
+    set1_cmap = ListedColormap(["#262262", "#87ACC5", "#00A261", "#FFF200"])
+    sns.heatmap(heatmap_data3, cbar=True, xticklabels=True, yticklabels=False, linewidths=0.5, linecolor='gray', cmap=set1_cmap, cbar_kws={"ticks": [0, 1, 2, 3]}, ax=axes[2])
+    axes[2].set_xlabel("Age Group")
+    axes[2].set_title("Heatmap for \n Age Group", fontsize=10)
+    plt.tight_layout()
+    if save_pt:
+        plt.savefig(save_pt, bbox_inches='tight', dpi=300)
+    plt.show()
+
+
+
+
+def branch_ROC(df, branch=0, class_name=">35y", ax=None, savefig=None, fontsize=12, line_thickness=2):
     df["branch0_truth"] = (df["age"] > 35).astype(int)
     df["branch1_truth"] = (df["age"] > 45).astype(int)
     df["branch2_truth"] = (df["age"] > 55).astype(int)
     classes = [0, 1]
-    
     y_true = label_binarize(df[f'branch{branch}_truth'], classes=classes)
     y_pred = df.loc[:, [f'sigmoid_{branch}']].values  
-    
-    plt.figure(figsize=(5, 5))
     fpr, tpr, _ = roc_curve(y_true, y_pred)
-    roc_auc = auc(fpr, tpr)  
-    plt.plot(fpr, tpr, label=f'{class_name} (AUC = {roc_auc:.2f})')
+    roc_auc = auc(fpr, tpr)
     
-    plt.plot([0, 1], [0, 1], 'k--', label='Random Classifier')
-    plt.title('One-vs-Rest ROC Curves for Each Class', fontsize=12)
-    plt.xlabel('False Positive Rate (FPR)', fontsize=12)
-    plt.ylabel('True Positive Rate (TPR)', fontsize=12)
-    plt.legend(loc='lower right', fontsize=12)
-    plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
-    plt.grid(True)
-    if savefig is not None:
-        plt.savefig(save_pt, format = 'pdf')
-    plt.show()
+    if ax: 
+        ax.plot(fpr, tpr, label=f'ROC curve (AUC = {roc_auc:.2f})', linewidth=line_thickness)
+        ax.plot([0, 1], [0, 1], color='gray', linestyle='--', linewidth=2)  # Thicker line for random classifier
+        ax.set_title(f'Branch {branch}', fontsize=fontsize)
+        ax.set_xlabel('False Positive Rate', fontsize=fontsize)
+        ax.set_ylabel('True Positive Rate', fontsize=fontsize)
+        ax.legend(loc="lower right", fontsize=fontsize)
+        ax.tick_params(axis='x', labelsize=fontsize)  # X-axis tick labels
+        ax.tick_params(axis='y', labelsize=fontsize)  # Y-axis tick labels
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
 
-
-
-def plot_cm(y_true, y_pred, fontsize=16):
-    cm = confusion_matrix(y_true, y_pred)
-    
-    plt.figure(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=np.unique(y_true), yticklabels=np.unique(y_true),
-                annot_kws={"size": fontsize})  # Adjust font size for annotations
-    
-    plt.xlabel('Predicted', fontsize=fontsize)
-    plt.ylabel('True', fontsize=fontsize)
-    plt.title('Confusion Matrix', fontsize=fontsize)
-    plt.xticks(fontsize=fontsize)
-    plt.yticks(fontsize=fontsize)
-    plt.show()
+    elif savefig: 
+        plt.plot(fpr, tpr, label=f'{class_name} (AUC = {roc_auc:.2f})', linewidth=line_thickness)
+        plt.plot([0, 1], [0, 1], color='gray', linestyle='--', linewidth=line_thickness)  
+        plt.title('One-vs-Rest ROC Curves for Each Class', fontsize=fontsize)
+        plt.xlabel('False Positive Rate (FPR)', fontsize=fontsize)
+        plt.ylabel('True Positive Rate (TPR)', fontsize=fontsize)
+        plt.legend(loc='lower right', fontsize=fontsize)
+        plt.xticks(fontsize=fontsize)
+        plt.yticks(fontsize=fontsize)
+        plt.grid(True)
+        plt.savefig(savefig, format='pdf')
+        plt.show()
 
 
 
