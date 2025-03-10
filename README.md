@@ -57,15 +57,8 @@ Moreover, **_BreastAgeNet_** provides attention heatmaps that can directly visua
 
 ### Step 3. External testing
 
-In the context of ordinal classification, where errors between adjacent classes are considered less severe than those between more distant classes, **_BreastAgeNet_** demonstrated robust performance on WSIs of NBT derived from reduction mammoplasties, with only 9% severe misclassification.
-<p align="center">
-    <img src="Docs/UR_NBT_ageing_prediction.png" width="60%">
-</p>
+In the context of ordinal classification, where errors between adjacent classes are considered less severe than those between more distant classes, **_BreastAgeNet_** demonstrated robust performance on WSIs of NBT derived from reduction mammoplasties, with only 9% severe misclassification. With its substantiated ability to model ageing trajectories in NBT, <i>BreastAgeNet</i> has revealed deviations between expected (chronological) and observed (predicted) tissue ageing in high-risk NBT from _gBRCA1/2_ mutation carriers or breast cancer patients. 
 
-With its substantiated ability to model ageing trajectories in NBT, <i>BreastAgeNet</i> has revealed deviations between expected (chronological) and observed (predicted) tissue ageing in high-risk NBT from _gBRCA1/2_ mutation carriers or breast cancer patients. 
-<p align="center">
-    <img src="Docs/HR_NBT_ageing_predictions.png" width="60%">
-</p>
 
 
 ## Installation
