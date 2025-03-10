@@ -31,6 +31,34 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 
+def branch_ROC(df, branch = 0, class_name = ">35y", save_pt=None):
+    df["branch0_truth"] = (df["age"] > 35).astype(int)
+    df["branch1_truth"] = (df["age"] > 45).astype(int)
+    df["branch2_truth"] = (df["age"] > 55).astype(int)
+    classes = [0, 1]
+    
+    y_true = label_binarize(df[f'branch{branch}_truth'], classes=classes)
+    y_pred = df.loc[:, [f'sigmoid_{branch}']].values  
+    
+    plt.figure(figsize=(5, 5))
+    fpr, tpr, _ = roc_curve(y_true, y_pred)
+    roc_auc = auc(fpr, tpr)  
+    plt.plot(fpr, tpr, label=f'{class_name} (AUC = {roc_auc:.2f})')
+    
+    plt.plot([0, 1], [0, 1], 'k--', label='Random Classifier')
+    plt.title('One-vs-Rest ROC Curves for Each Class', fontsize=12)
+    plt.xlabel('False Positive Rate (FPR)', fontsize=12)
+    plt.ylabel('True Positive Rate (TPR)', fontsize=12)
+    plt.legend(loc='lower right', fontsize=12)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.grid(True)
+    if savefig is not None:
+        plt.savefig(save_pt, format = 'pdf')
+    plt.show()
+
+
+
 def plot_cm(y_true, y_pred, fontsize=16):
     cm = confusion_matrix(y_true, y_pred)
     
