@@ -93,16 +93,8 @@ prj_BreastAgeNet/
 ```
 Note: The slide1_patch.csv file contains important patch information, including coordinates on WSI, and confidence of containing epithelium contents
 
-For step 0.2: Feature extraction, implement the following:
-```
-python extractFeatures.py \
-  --WSIs /path/to/WSIs \
-  --FEATURES /path/to/features \
-  --model_name UNI \
-  --stainFunc augmentation \
-  --batch_size 32 \
-  --num_workers 4
-```
+For step 0.2: Feature extraction, please refer to [notebook extract_features](notebooks/extract_features.ipynb) 
+
 This step yields:
 ```
 prj_BreastAgeNet/
@@ -141,7 +133,14 @@ prj_BreastAgeNet/
 
 For Step 2. For visualisation, please refer to [notebook vis_tSNE](notebooks/vis_tSNE.ipynb) and [notebook vis_attention_heatmap](notebooks/vis_attention_heatmap.ipynb)
 
-For Step 3. For external testing, please refer to [notebook inference](notebooks/inference.ipynb)
+For Step 3. For external testing, please implement the following:
+```
+git clone https://github.com/SiyuanChen726/BreastAgeNet.git
+cd BreastAgeNet
+conda env create -f environment.yml
+conda activate torch-env
+```
+
 
 
 ## **_BreastAgeNet_** future directions
