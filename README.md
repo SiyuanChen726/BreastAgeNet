@@ -9,7 +9,7 @@
 ## **_BreastAgeNet_** Walkthrough
 **_BreastAgeNet_** is a computational pathology (CPath) framework designed to assess tissue ageing in NBT from WSI. It was developed and tested on WSIs of NBT across multiple cohorts and resources.
 <p align="center">
-    <img src="Docs/NBT_cohorts.png" width="85%"> 
+    <img src="Docs/cohort.png" width="85%"> 
 </p>
 
 
@@ -22,32 +22,26 @@ The implementation can largely be broken down into the following steps:
 
 ### Step 0. Dataset preprocessing
 The framework leverages advanced deep learning methods, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture ordinal age-related histological alterations. For the framework, the pre-processing includes: 
-
 #### Step 0.1: Patch preparation
 This step will perform foreground tissue detection, patch tessellation and tissue type classification. For more details, please check our [_NBT-Classifier_].(https://github.com/SiyuanChen726/NBT-Classifier.git).
-
 #### Step 0.2: Feature extraction
-This step extracts visual features from randomly sampled patches using pre-trained image encoders. 
+This step extracts visual features from randomly sampled patches using pre-trained feature extractors. 
+
+
+### Step 1. _BreastAgeNet_ training 
+The training was implemented using different configurations through 5-fold cross-validation, tuning factors including feature extractor, attention mechanism, tissue content, and bag size.
+
 <p align="center">
     <img src="Docs/BreastAgeNet.png" width="100%">
 </p>
 
 
-### Step 1. _BreastAgeNet_ training 
-The training was implemented using different configurations through 5-fold cross-validation. 
-<p align="center">
-    <img src="Docs/Bag_preparation.png" width="100%">
-</p>
-
-
 ### Step 2. Visualisation
-
 #### Step 2.1 tSNE projection of the whole dataset
 **_BreastAgeNet_**  learns ageing-related microscopic patterns in a data-driven manner, using a multi-head self-attention mechanism to prioritize relevant patterns for accurate branch predictions. By integrating information from multiple branches, the model enhances the robustness of its predictions and provides deeper insights into the nuanced ageing-related changes in NBT.
 <p align="center">
     <img src="Docs/BreastAgeNet_attention.png" width="100%">
 </p>
-
 #### Step 2.2 Attention heatmap for a single WSI
 Moreover, **_BreastAgeNet_** provides attention heatmaps that can directly visualise ageing-related spatial heterogeneity across the tissue, with this variability showing strong associations with manually annotated, age-related lobule types. 
 <p align="center">
@@ -56,7 +50,6 @@ Moreover, **_BreastAgeNet_** provides attention heatmaps that can directly visua
 
 
 ### Step 3. External testing
-
 In the context of ordinal classification, where errors between adjacent classes are considered less severe than those between more distant classes, **_BreastAgeNet_** demonstrated robust performance on WSIs of NBT derived from reduction mammoplasties, with only 9% severe misclassification. With its substantiated ability to model ageing trajectories in NBT, <i>BreastAgeNet</i> has revealed deviations between expected (chronological) and observed (predicted) tissue ageing in high-risk NBT from _gBRCA1/2_ mutation carriers or breast cancer patients. 
 
 
@@ -132,14 +125,7 @@ prj_BreastAgeNet/
 
 For Step 1. _BreastAgeNet_ training, implement the following:
 ```
-python main.py \
-  --model_name UNI \
-  --TC_epi 0.9 \
-  --bag_size 250 \
-  --attention MultiHeadAttention \
-  --FEATURES /path/to/features \
-  --CLINIC /path/to/clinic.csv \
-  --RESULTS /path/to/results
+python main.py --config_name config_v3
 ```
 This step yields:
 ```
