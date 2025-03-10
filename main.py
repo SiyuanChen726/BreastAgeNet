@@ -1,6 +1,6 @@
 import argparse
 import json
-from utils_train import train_cv  
+from utils_train import * 
 
 
 
@@ -15,4 +15,4 @@ with open(config_path, "r") as f:
     print(config)
     
 
-train_cv(config)
+train_CV(config)
