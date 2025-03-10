@@ -9,7 +9,7 @@
 ## **_BreastAgeNet_** Walkthrough
 **_BreastAgeNet_** is a computational pathology (CPath) framework designed to assess tissue ageing in NBT from WSI. It was developed and tested on WSIs of NBT across multiple cohorts and resources.
 <p align="center">
-    <img src="Docs/cohort.png" width="85%"> 
+    <img src="Docs/cohort.png" width="60%"> 
 </p>
 
 
@@ -32,7 +32,7 @@ This step extracts visual features from randomly sampled patches using pre-train
 The training was implemented using different configurations through 5-fold cross-validation, tuning factors including feature extractor, attention mechanism, tissue content, and bag size.
 
 <p align="center">
-    <img src="Docs/BreastAgeNet.png" width="100%">
+    <img src="Docs/BreastAgeNet.png" width="60%">
 </p>
 
 
