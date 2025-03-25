@@ -1,0 +1,23 @@
+task: "train_cv"
+clinic_path: "/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/Metadata/train_NR_clean.csv"
+TC_epi: 0.9
+bag_size: 250
+model_name: "UNI"
+attention: "MultiHeadAttention"
+resFolder: "/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/RESULTs/main"
+
+WSIs: "/scratch_tmp/prj/cb_normalbreast/Siyuan/prj_normal/BreastAgeNet/WSIs"
+FEATURES: "/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/FEATURES"
+split_ratio: 0.8
+stainFunc: "augmentation"
+aug_prob: 0.5
+n_classes: 3
+n_heads: 8
+n_latent: 512
+attn_dropout: 0.5
+attn_temp: 0.5
+batch_size: 16
+lr: 0.00001
+weight_decay: 0.00005
+patience: 10
+max_epochs: 200
