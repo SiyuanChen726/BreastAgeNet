@@ -47,7 +47,7 @@ The implementation can largely be broken down into the following steps:
 ### Step 1. WSI pre-processing
 
 Step 1.1: Tessellation and tissue classification
-This step will perform foreground tissue detection, patch tessellation and tissue type classification. For more details, please check our [_NBT-Classifier_]. (https://github.com/cancerbioinformatics/NBT-Classifier). For each WSI, the pipeline generates a _patch.csv file that contains the coordinates of patches and their tissue classification results.
+This step will perform foreground tissue detection, patch tessellation and tissue type classification. For more details, please check our [_NBT-Classifier_] (https://github.com/cancerbioinformatics/NBT-Classifier). For each WSI, the pipeline generates a _patch.csv file that contains the coordinates of patches and their tissue classification results.
 
 
 Step 1.2: Feature extraction of selected patches
