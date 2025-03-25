@@ -9,26 +9,18 @@
 </p>
 
 
-## **_BreastAgeNet_** Walkthrough
-**_BreastAgeNet_** is a computational pathology (CPath) framework, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture ordinal age-related histological alterations and designed to predict tissue ageing ranks in NBT from WSI. 
-The implementation can largely be broken down into the following steps:
-- **Step 0**: Dataset pre-processing  
-- **Step 1**: _BreastAgeNet_ training  
-- **Step 2**: Visualization  
-- **Step 3**: External testing  
 
-
-### Step 0. Dataset preprocessing
+### Dataset Overview
 The framework was developed and tested on WSIs of NBT across multiple cohorts and resources. 
 <p align="center">
     <img src="Docs/cohort.png" width="60%"> 
 </p>
 
 
-WSI data is expected to be organised as follows:
+WSIs and metadata are expected to be organised as follows:
 ```
 prj_BreastAgeNet/
-├── data
+├── metadata
 │   ├── train_meta.csv
 │   ├── NR_meta.csv
 │   └── BRCA_meta.csv
@@ -41,12 +33,24 @@ prj_BreastAgeNet/
 ```
 
 
-For the framework, the pre-processing includes: 
-Step 0.1: Tessellation and tissue classification
+## **_BreastAgeNet_** Walkthrough
+
+**_BreastAgeNet_** is a computational pathology (CPath) framework, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture ordinal age-related histological alterations and designed to predict tissue ageing ranks in NBT from WSI. 
+
+The implementation can largely be broken down into the following steps:
+- **Step 1**: Dataset pre-processing  
+- **Step 2**: _BreastAgeNet_ training  
+- **Step 3**: External testing 
+- **Step 4**: Visualization  
+
+
+### Step 1. WSI pre-processing
+
+Step 1.1: Tessellation and tissue classification
 This step will perform foreground tissue detection, patch tessellation and tissue type classification. For more details, please check our [_NBT-Classifier_]. (https://github.com/cancerbioinformatics/NBT-Classifier). For each WSI, the pipeline generates a _patch.csv file that contains the coordinates of patches and their tissue classification results.
 
 
-Step 0.2: Feature extraction of selected patches
+Step 1.2: Feature extraction of selected patches
 This step extracts visual features from randomly sampled patches using pre-trained feature extractors.  For this, implement the following:
 
 ```
@@ -73,7 +77,10 @@ prj_BreastAgeNet/
 ```
 
 
-### Step 1. _BreastAgeNet_ training 
+### Step 2. _BreastAgeNet_ training 
+
+Step 2.1: Five-fold cross-validation training
+
 The training was implemented using different configurations through 5-fold cross-validation, tuning factors including feature extractor, attention mechanism, tissue content, and bag size. For this, implement the following:
 
 ```
