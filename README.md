@@ -35,13 +35,15 @@ prj_BreastAgeNet/
 
 ## **_BreastAgeNet_** Walkthrough
 
+
 **_BreastAgeNet_** is a computational pathology (CPath) framework, incorporating a multi-branch multiple-instance learning (MIL) architecture to capture ordinal age-related histological alterations and designed to predict tissue ageing ranks in NBT from WSI. 
 
 The implementation can largely be broken down into the following steps:
 - **Step 1**: Dataset pre-processing  
 - **Step 2**: _BreastAgeNet_ training  
 - **Step 3**: External testing 
-- **Step 4**: Visualization  
+- **Step 4**: Visualization
+  
 
 
 ### Step 1. WSI pre-processing
@@ -75,6 +77,13 @@ prj_BreastAgeNet/
 │   │   └── slide1_ResNet50_reinhard.h5
 │   └── ...
 ```
+
+Step 1.3: clean data
+This step further cleans the data by removing invalid slides that either failed to obtain features or contain epithelium patches (with a confidence higher than 0.9) less than 5. 
+
+For a full implementation of WSI pre-processing, please refer to: [WSI_preprocessing.ipynb](notebooks/WSI_preprocessing.ipynb).
+
+
 
 
 ### Step 2. _BreastAgeNet_ training 
