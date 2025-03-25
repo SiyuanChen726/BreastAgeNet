@@ -28,7 +28,10 @@ The framework was developed and tested on WSIs of NBT across multiple cohorts an
 WSI data is expected to be organised as follows:
 ```
 prj_BreastAgeNet/
-├── CLINIC/clinicData_all.csv
+├── data
+│   ├── train_meta.csv
+│   ├── NR_meta.csv
+│   └── BRCA_meta.csv
 ├── WSIs
 │   ├── KHP/slide1.ndpi, slide2.ndpi ...
 │   ├── NKI/slide1.mrxs, ...
@@ -39,42 +42,32 @@ prj_BreastAgeNet/
 
 
 For the framework, the pre-processing includes: 
-Step 0.1: Patch preparation
-This step will perform foreground tissue detection, patch tessellation and tissue type classification. For more details, please check our [_NBT-Classifier_].(https://github.com/SiyuanChen726/NBT-Classifier.git).
+Step 0.1: Tessellation and tissue classification
+This step will perform foreground tissue detection, patch tessellation and tissue type classification. For more details, please check our [_NBT-Classifier_]. (https://github.com/cancerbioinformatics/NBT-Classifier). For each WSI, the pipeline generates a _patch.csv file that contains the coordinates of patches and their tissue classification results.
 
-This step yields:
+
+Step 0.2: Feature extraction of selected patches
+This step extracts visual features from randomly sampled patches using pre-trained feature extractors.  For this, implement the following:
+
 ```
-prj_BreastAgeNet/
-├── WSIs/                     # Raw WSIs
-├── QC/KHP/                   
-│   ├── slide1_maskuse.png    # Mask for foreground tissue regions 
-│   └── ...
-├── Features/KHP/slide1/      
-│   ├── slide1_TCmask.png     # Tissue classification mask
-│   ├── slide1_patch.csv      # Patch-level metadata (tissue classification probabilities)
-│   └── ...
+python extractFeatures.py --model UNI --stain augmentation --cohort NKI
 ```
-Note: The slide1_patch.csv file contains important patch information, including coordinates on WSI, and confidence of containing epithelium contents
+The script supports applying models including pre-trained ResNet50, [UNI](https://huggingface.co/MahmoodLab/UNI), [prov-gigapath](https://huggingface.co/prov-gigapath/prov-gigapath) and [phikon](https://huggingface.co/owkin/phikon) and stain generalisation methods such as normalisation ([Reinhard](https://github.com/chia56028/Color-Transfer-between-Images)) and augmentation ([RandStainNA](https://github.com/yiqings/RandStainNA)).
 
-Step 0.2: Feature extraction
-This step extracts visual features from randomly sampled patches using pre-trained feature extractors. Please refer to [notebook extract_features](notebooks/extract_features.ipynb) 
-
-This step yields:
+After running all options, this step yields:
 ```
 prj_BreastAgeNet/
 ├── WSIs
 ├── QC
 ├── Features/KHP
 │   ├── slide1
-│   │   ├── slide1_TCmask.png 
-│   │   ├── slide1_patch.csv
 │   │   ├── slide1_UNI_augmentation.h5
 │   │   ├── slide1_gigapath_augmentation.h5
-│   │   ├── slide1_iBOT_augmentation.h5
+│   │   ├── slide1_phikon_augmentation.h5
 │   │   ├── slide1_ResNet50_augmentation.h5
 │   │   ├── slide1_UNI_reinhard.h5
 │   │   ├── slide1_gigapath_reinhard.h5
-│   │   ├── slide1_iBOT_reinhard.h5
+│   │   ├── slide1_phikon_reinhard.h5
 │   │   └── slide1_ResNet50_reinhard.h5
 │   └── ...
 ```
