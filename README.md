@@ -10,7 +10,7 @@
 
 
 
-### Dataset Overview
+## Dataset Overview
 The framework was developed and tested on WSIs of NBT across multiple cohorts and resources. 
 <p align="center">
     <img src="Docs/cohort.png" width="60%"> 
@@ -20,10 +20,10 @@ The framework was developed and tested on WSIs of NBT across multiple cohorts an
 WSIs and metadata are expected to be organised as follows:
 ```
 prj_BreastAgeNet/
-├── metadata
-│   ├── train_meta.csv
-│   ├── NR_meta.csv
-│   └── BRCA_meta.csv
+├── Metadata
+│   ├── train.csv
+│   ├── test_NR.csv
+│   └── test_BRCA.csv
 ├── WSIs
 │   ├── KHP/slide1.ndpi, slide2.ndpi ...
 │   ├── NKI/slide1.mrxs, ...
@@ -61,8 +61,8 @@ The script supports applying models including pre-trained ResNet50, [UNI](https:
 After running all options, this step yields:
 ```
 prj_BreastAgeNet/
+├── Metadata
 ├── WSIs
-├── QC
 ├── Features/KHP
 │   ├── slide1
 │   │   ├── slide1_UNI_augmentation.h5
@@ -89,14 +89,17 @@ python main.py --config_name config_v3
 This step yields:
 ```
 prj_BreastAgeNet/
+├── metadata
 ├── WSIs
-├── QC
 ├── Features
 ├── models
 │   │──epi0.9_UNI_250_MultiHeadAttention_fold4_bestModel.pt
 │   │──epi0.9_UNI_250_MultiHeadAttention_fold4_trainvalCurves_testMAE0.53.png
 │   └── ...
 ```
+
+
+
 
 
 ### Step 2. Visualisation
