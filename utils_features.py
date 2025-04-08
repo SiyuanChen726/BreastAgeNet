@@ -236,10 +236,10 @@ class Dataset_fromWSI(Dataset):
         self.__getwsi__(wsi_id)
         patch_im = self.wsi.read_region((grid_x*patch_size, grid_y*patch_size), 0, (patch_size, patch_size)).convert("RGB")
         
-        if self.stainFunc == 'Reinhard': 
+        if self.stainFunc == 'reinhard': 
             patch_im = Image.fromarray(Reinhard(np.array(patch_im)))
        
-        elif self.stainFunc == 'RandStainNA':
+        elif self.stainFunc == 'augmentation':
             augmentor = RandStainNA(
                 yaml_file = '/scratch_tmp/users/k21066795/RandStainNA/CRC_LAB_randomTrue_n0.yaml',
                 std_hyper = 0.0,
@@ -272,9 +272,9 @@ class Dataset_frompatch(Dataset):
         img_pt = self.csv.iloc[index]['file_path']
         patch_im = Image.open(img_pt).convert('RGB')
         
-        if self.stainFunc == 'Reinhard': 
+        if self.stainFunc == 'reinhard': 
             patch_im = Image.fromarray(Reinhard(np.array(patch_im)))
-        elif self.stainFunc == 'RandStainNA':
+        elif self.stainFunc == 'augmentation':
             augmentor = RandStainNA(
                 yaml_file = '/scratch_tmp/users/k21066795/RandStainNA/CRC_LAB_randomTrue_n0.yaml',
                 std_hyper = 0.0,

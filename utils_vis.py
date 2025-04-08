@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 import sys
+import math
+import cv2
 import glob
 import json
 import random
@@ -13,7 +15,9 @@ from typing import Tuple, Optional, List, Union
 from PIL import Image, ImageDraw
 import openslide
 import matplotlib.pyplot as plt
+plt.rcParams["font.family"] = "DejaVu Sans"
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap, BoundaryNorm
+from matplotlib import colors as mcolors
 import seaborn as sns
 from skimage import morphology
 from mpl_toolkits.axes_grid1 import ImageGrid
@@ -23,7 +27,23 @@ from sklearn.metrics import confusion_matrix
 from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import pairwise_distances
+from itertools import combinations  # Add this import
+
+
 from scipy.stats import mode
+from scipy.stats import ranksums
+from statsmodels.stats.multitest import multipletests
+from scipy.ndimage import zoom
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.ndimage import zoom
+from matplotlib.colors import SymLogNorm
+
+
 from shapely.geometry import Point, Polygon
 import geopandas as gpd
 
@@ -98,179 +118,271 @@ def branch_ROC(df, branch=0, class_name=">35y", ax=None, savefig=None, fontsize=
 
 
 
-def plot_cm_norm(y_true, y_pred, fontsize=16):
+
+def plot_cm(y_true, y_pred, fontsize=16, save_pt=None, ax=None):
+    cm = confusion_matrix(y_true, y_pred)
+    
+    if ax is None:  # If no axis is provided, create a new figure
+        plt.figure(figsize=(6, 5))
+        ax = plt.gca()  # Get current axis for the new figure
+    
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=np.unique(y_true), yticklabels=np.unique(y_true),
+                annot_kws={"size": fontsize+1}, ax=ax)  # Plot on the provided axis
+    
+    ax.set_xlabel('Predicted', fontsize=fontsize)
+    ax.set_ylabel('True', fontsize=fontsize)
+    ax.set_title('Confusion Matrix', fontsize=fontsize)
+    ax.tick_params(axis='both', which='major', labelsize=fontsize)
+    
+    # Adjust the colorbar ticks size
+    cbar = ax.collections[0].colorbar  # Get colorbar object from the heatmap
+    cbar.ax.tick_params(labelsize=fontsize-1)  # Adjust font size of colorbar ticks
+    
+    if save_pt is not None:
+        plt.savefig(save_pt, format="pdf", dpi=300, transparent=True)
+    if ax is None:  # If the plot was created individually (no ax), show it
+        plt.show()
+
+
+
+def plot_cm_norm(y_true, y_pred, fontsize=16, save_pt=None, ax=None):
     cm = confusion_matrix(y_true, y_pred, normalize='true')
     
-    plt.figure(figsize=(6, 5))
+    if ax is None:  # If no axis is provided, create a new figure
+        plt.figure(figsize=(6, 5))
+        ax = plt.gca()  # Get current axis for the new figure
+    
     sns.heatmap(cm, annot=True, fmt='.2f', cmap='Blues', 
                 xticklabels=np.unique(y_true), yticklabels=np.unique(y_true),
-                annot_kws={"size": fontsize})  # Adjust font size for annotations
+                annot_kws={"size": fontsize+1}, vmin=0, vmax=1, ax=ax)  # Plot on the provided axis
     
-    plt.xlabel('Predicted', fontsize=fontsize)
-    plt.ylabel('True', fontsize=fontsize)
-    plt.title('Normalized Confusion Matrix', fontsize=fontsize)
-    plt.xticks(fontsize=fontsize)
-    plt.yticks(fontsize=fontsize)
-    plt.show()
+    ax.set_xlabel('Predicted', fontsize=fontsize)
+    ax.set_ylabel('True', fontsize=fontsize)
+    ax.set_title('Normalized Confusion Matrix', fontsize=fontsize)
+    ax.tick_params(axis='both', which='major', labelsize=fontsize)
+    
+    # Adjust the colorbar ticks size
+    cbar = ax.collections[0].colorbar  # Get colorbar object from the heatmap
+    cbar.ax.tick_params(labelsize=fontsize-1)  # Adjust font size of colorbar ticks
+    
+    if save_pt is not None:
+        plt.savefig(save_pt, format="pdf", dpi=300, transparent=True)
+    if ax is None:  # If the plot was created individually (no ax), show it
+        plt.show()
+
+
 
 
 def barplot_multiple_WSIs(output_df, save_pt):
+    # Prepare data
     output_df["patient_id"] = output_df["patient_id"].fillna('').astype(str)
     output_df_sorted = output_df.sort_values(by='age', ascending=True)
     
+    # Create pivot table for stacked bar chart
     pivot_df = output_df_sorted.groupby(['patient_id', 'final_prediction']).size().unstack(fill_value=0)
     patient_ids_sorted = output_df_sorted['patient_id'].drop_duplicates().values
     pivot_df = pivot_df.loc[patient_ids_sorted]
     ages = output_df_sorted.drop_duplicates(subset='patient_id')['age'].values
     
-    fig, ax1 = plt.subplots(figsize=(12, 8))
+    # Create the figure and axes for side-by-side plots (2 rows, 1 column)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 6), sharex=True, gridspec_kw={'height_ratios': [0.5, 1]})
+    
+    # Age plot (now on the top with black color)
+    ax1.plot(patient_ids_sorted, ages, color='black', marker='o', linestyle='-', linewidth=1, markersize=4, label='Patient Age')
+    
+    # Set labels for the age plot
+    ax1.set_xlabel('Patient ID (Ordered by Age)', fontsize=10)
+    ax1.set_ylabel('Age', fontsize=10, color='black')
+    ax1.tick_params(axis='y', labelcolor='black')
+    ax1.set_xticklabels(patient_ids_sorted, fontsize=10, rotation=90)
+    ax1.set_title('Patient Age by Patient ID (Ordered by Age)', fontsize=10)
+    
+    # Restrict y-ticks to 0, 35, 45, 55
+    ax1.set_yticks([0, 35, 45, 55])
+    
+    # Add dashed lines at y=35, y=45, and y=55
+    ax1.axhline(y=35, color='navy', linestyle='--', linewidth=0.75)
+    ax1.axhline(y=45, color='navy', linestyle='--', linewidth=0.75)
+    ax1.axhline(y=55, color='navy', linestyle='--', linewidth=0.75)
+
+    # Stacked predicted ranks plot (now at the bottom)
     custom_colors = ["#262262", "#87ACC5", "#00A261", "#FFF200"] * (len(pivot_df.columns) // 4 + 1)
     custom_colors = custom_colors[:len(pivot_df.columns)]
-    pivot_df.plot(kind='bar', stacked=True, color=custom_colors, ax=ax1, width=0.9)
+    pivot_df.plot(kind='bar', stacked=True, color=custom_colors, ax=ax2, width=0.9)
 
-    ax1.set_xlabel('Patient ID (Ordered by Age)', fontsize=12)
-    ax1.set_ylabel('Count of Predicted Ranks', fontsize=12)
-    ax1.set_xticklabels(patient_ids_sorted, fontsize=10, rotation=90)
-    ax1.legend(title="Predicted Ranks", bbox_to_anchor=(1.05, 1), loc='upper left')
-    ax1.set_title('Stacked Predicted Ranks by Patient ID (Ordered by Age)', fontsize=14)
+    # Set labels and title for the stacked bar chart
+    ax2.set_xlabel('Patient ID (Ordered by Age)', fontsize=12)
+    ax2.set_ylabel('Count of Predicted Ranks', fontsize=12)
+    ax2.set_xticklabels(patient_ids_sorted, fontsize=10, rotation=90)
+    ax2.legend(title="Predicted Ranks", bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax2.set_title('Stacked Predicted Ranks by Patient ID (Ordered by Age)', fontsize=14)
+
+    # Tight layout to prevent overlap
     plt.tight_layout()
     
+    # Save the plot if a save path is provided
     if save_pt is not None:
         plt.savefig(save_pt, format='pdf')
     
-    plt.show()
-
-
-
-def get_tsne_df(repeats):
-    tsne_df = repeats.copy()
-    
-    embedding_columns = [col for col in tsne_df.columns if col.startswith('embedding_')]
-    tsne = TSNE(n_components=2, random_state=42)
-    projections = tsne.fit_transform(tsne_df.loc[:, embedding_columns])
-    
-    tsne_df["tsne1"] = -projections[:,0]
-    tsne_df["tsne2"] = -projections[:,1]
-    return tsne_df
-
-
-def plot_RidgePlot(tsne_df, label="age_group", save_pt=None):
-    pal = sns.cubehelix_palette(4, rot=-.25, light=.7)
-    g = sns.FacetGrid(tsne_df, row=label, hue=label, aspect=15, height=1, palette=pal)
-
-    g.map(sns.kdeplot, "tsne1",
-          bw_adjust=.5, clip_on=False,
-          fill=True, alpha=1, linewidth=1.5)
-    g.map(sns.kdeplot, "tsne1", clip_on=False, color="w", lw=2, bw_adjust=.5)
-    g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
-
-    def label(x, color, label):
-        ax = plt.gca()
-        ax.text(0, .2, label, fontweight="bold", color=color,
-                ha="left", va="center", transform=ax.transAxes)
-    
-    g.map(label, "tsne1")
-    g.figure.subplots_adjust(hspace=-.25)
-    g.set_titles("")
-    g.set(yticks=[], ylabel="")
-    g.despine(bottom=True, left=True)
-    
-    fig = plt.gcf()  # Get the current figure
-    fig.set_size_inches(5, 5)  # Set the height and width of the figure (in inches)
-    if save_pt is not None:
-        plt.savefig(save_pt, format="pdf", dpi=300)
+    # Show the plot
     plt.show()
 
 
 
 
-def plot_2D_DensityPlot(tsne_df, label="age_group", max_categories=4, save_pt=None):
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    sns.set(style="white")
-    axes = axes.flatten()
-    for i in range(max_categories):
-        category = np.unique(tsne_df[label])[i]
-        subset = tsne_df[tsne_df[label] == category]
+def compute_patient_level_predictions(df):
+    patient_predictions = []
+    
+    for repetition in range(10):
+        for patient_id in df['patient_id'].unique():
+            patient_data = df[df['patient_id'] == patient_id]
+            available_wsi_count = patient_data.shape[0]
+            
+            for sample_size in [1, 2, 3, available_wsi_count]:  
+                sampled_data = patient_data.sample(n=sample_size, replace=True)
+                
+                avg_sigmoid_0 = sampled_data['sigmoid_0'].mean()
+                avg_sigmoid_1 = sampled_data['sigmoid_1'].mean()
+                avg_sigmoid_2 = sampled_data['sigmoid_2'].mean()
+                
+                binary_0 = 1 if avg_sigmoid_0 > 0.5 else 0
+                binary_1 = 1 if avg_sigmoid_1 > 0.5 else 0
+                binary_2 = 1 if avg_sigmoid_2 > 0.5 else 0
+                
+                final_prediction = binary_0 + binary_1 + binary_2  
+                
+                patient_predictions.append({
+                    'patient_id': patient_id,
+                    'sample_size': "all" if sample_size > 3 else sample_size,
+                    'age_group': patient_data['age_group'].iloc[0],  
+                    'final_prediction': final_prediction,
+                    'repetition': repetition + 1  # Track repetition
+                })
+    
+    return pd.DataFrame(patient_predictions)
 
-        sns.kdeplot(
-            x=subset["tsne1"],
-            y=subset["tsne2"],
-            fill=True,
-            alpha=0.5,
-            ax=axes[i],
-            cmap="viridis"
+
+
+
+def plot_tsne(tsne_df, color='age_group', custom_palette=None, vmin=None, vmax=None, 
+              figsize=(8, 6), point_size=3, alpha=0.7, save_pt=None, ax=None):
+
+    fea_df = tsne_df.copy()
+    
+    if "attention" in color:
+        cmap = "coolwarm"
+        vmin = vmin if vmin is not None else fea_df[color].min()
+        vmax = vmax if vmax is not None else fea_df[color].max()
+    else:
+        if custom_palette is None:
+            default_palettes = {
+                "age_group": {0: '#262262', 1: '#87ACC5', 2: '#00A261', 3: '#FFF200'},
+                "Cluster": {0: '#8da0cb', 1: '#66c2a5', 2: '#ffd92f', 3: '#b3b3b3'}
+            }
+            custom_palette = default_palettes.get(color, default_palettes["age_group"])
+        fea_df['scatter_color'] = fea_df[color].map(custom_palette)
+        cmap = None  
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+
+    if cmap:
+        scatter = ax.scatter(
+            fea_df["tsne1"], fea_df["tsne2"], c=fea_df[color], cmap=cmap, 
+            alpha=alpha, s=point_size, vmin=vmin, vmax=vmax
         )
+        cbar = plt.colorbar(scatter, ax=ax)
+        cbar.set_label(color.replace("_", " ").title())
+    else:
+        scatter = ax.scatter(
+            fea_df["tsne1"], fea_df["tsne2"], c=fea_df['scatter_color'], 
+            alpha=alpha, s=point_size
+        )
+        handles = [plt.Line2D([0], [0], marker='o', color='w', 
+                              markerfacecolor=custom_palette[label], markersize=10) 
+                   for label in custom_palette]
+        legend = ax.legend(handles, custom_palette.keys(), title=color.replace("_", " ").title(), 
+                           loc="center right", bbox_to_anchor=(1.2, 0.5), frameon=False)
 
-        axes[i].set_title(f"Density Plot for {category}")
-        axes[i].set_xlabel("t-SNE 1")
-        axes[i].set_ylabel("t-SNE 2")
+    ax.set_title(f't-SNE Colored by {color.replace("_", " ").title()}')
+    ax.set_xlabel('t-SNE Component 1')
+    ax.set_ylabel('t-SNE Component 2')
+    ax.grid(False)
 
-    plt.tight_layout()
-    plt.suptitle("t-SNE Density Plots by Category", y=1.02)
     if save_pt:
         plt.savefig(save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1)
-    plt.show()
-
-
-
-
-
-def plot_tsne(tsne_df, color='age_group', cluster_colors=None, vmin=None, vmax=None, figsize=(10, 8), point_size=3, alpha=0.5, save_pt=None):
-    # cluster_colors = {0: '#8da0cb', 3: '#66c2a5', 2: '#b3b3b3', 1: '#ffd92f'}
-    # cluster_colors = {0: '#8da0cb', 3: '#66c2a5', 2: '#b3b3b3', 1: '#ffd92f',
-    #                   4: '#A6C8E1', 5: '#FEF39E', 6: '#E5E5E5', 7: '#B1DED6'}
-    fea_df = tsne_df.copy() 
-    fea_df[color] = pd.to_numeric(fea_df[color], errors='coerce')
-    fea_df = fea_df.dropna(subset=[color])
-    if vmin is None:
-        vmin = fea_df[color].min()  # or a specific value, e.g., 0
-    if vmax is None:
-        vmax = fea_df[color].max()  # or a specific value, e.g., 1
-
-    if color == "age_group":
-        cmap = plt.get_cmap('viridis', fea_df['age_group'].nunique())  # 'viridis' for age group
-    elif "attention" in color:
-        cmap = "viridis"
-    else:
-        if cluster_colors is None:
-            unique_clusters = fea_df[color].unique()
-            cmap_set1 = plt.get_cmap("Set1")
-            cluster_colors = {cluster: cmap_set1(i % cmap_set1.N) for i, cluster in enumerate(unique_clusters)}
-        fea_df['cluster_color'] = fea_df[color].map(cluster_colors)
-        cmap = None
-
-    plt.figure(figsize=figsize)
-    if cmap is not None:
-        scatter = plt.scatter(
-            fea_df["tsne1"], 
-            fea_df["tsne2"], 
-            c=fea_df[color], 
-            cmap=cmap, 
-            alpha=alpha, 
-            s=point_size,
-            vmin=vmin,  # Set minimum color scale value
-            vmax=vmax   # Set maximum color scale value
-        )
-        plt.colorbar(scatter, label=color)
-    else:
-        scatter = plt.scatter(
-            fea_df["tsne1"], 
-            fea_df["tsne2"], 
-            c=fea_df['cluster_color'],  # Use the custom cluster colors
-            alpha=alpha, 
-            s=point_size
-        )
-        handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=color, markersize=10) for color in cluster_colors.values()]
-        labels = list(cluster_colors.keys())
-        plt.legend(handles, labels, title=color, loc="upper right")
     
-    plt.title(f't-SNE Visualization Colored by {color}')
-    plt.xlabel('t-SNE Component 1')
-    plt.ylabel('t-SNE Component 2')
-    if save_pt:
-        plt.savefig(save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1)
-    plt.grid(False)
-    plt.show()
+    if ax is None:
+        plt.show()
+
+
+
+# def plot_RidgePlot(tsne_df, label="age_group", save_pt=None):
+#     custom_palette = {0: '#262262', 1: '#87ACC5', 2: '#00A261', 3: '#FFF200'}
+    
+#     g = sns.FacetGrid(tsne_df, row=label, hue=label, aspect=15, height=1, palette=custom_palette)
+#     g.map(sns.kdeplot, "tsne1",
+#           bw_adjust=.5, clip_on=False,
+#           fill=True, linewidth=1.5, alpha=0.8)  
+#     g.map(sns.kdeplot, "tsne1", clip_on=False, color="w", lw=2, bw_adjust=.5, alpha=0) 
+#     g.refline(y=0, linewidth=2, linestyle="-", color=None, clip_on=False)
+
+#     def label_func(x, color, label):
+#         ax = plt.gca()
+#         ax.text(-0.1, 0.1, f"Rank {label}", fontweight="bold", color="black",  
+#                 ha="left", va="center", transform=ax.transAxes)
+
+#     g.map(label_func, "tsne1")
+#     g.figure.subplots_adjust(hspace=-.25)
+#     g.set_titles("")
+#     g.set(yticks=[], ylabel="")
+#     g.despine(bottom=True, left=True)
+
+#     for ax in g.axes.flat:
+#         ax.set_facecolor('none')  # Subplot background is transparent
+#         ax.spines['top'].set_visible(False)  # Remove top spine (border)
+#         ax.spines['right'].set_visible(False)  # Remove right spine (border)
+#         ax.spines['left'].set_visible(False)  # Remove left spine (border)
+#         ax.spines['bottom'].set_visible(False)  # Remove bottom spine (border)
+#         ax.grid(False)  # Remove gridlines
+
+#     fig = plt.gcf()
+#     fig.set_size_inches(5, 5) 
+#     if save_pt is not None:
+#         plt.savefig(save_pt, format="pdf", dpi=300, transparent=True)
+#     plt.show()
+
+
+
+
+
+# def plot_2D_DensityPlot(tsne_df, label="age_group", max_categories=4, save_pt=None):
+#     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+#     sns.set(style="white")
+#     axes = axes.flatten()
+#     for i in range(max_categories):
+#         category = np.unique(tsne_df[label])[i]
+#         subset = tsne_df[tsne_df[label] == category]
+
+#         sns.kdeplot(
+#             x=subset["tsne1"],
+#             y=subset["tsne2"],
+#             fill=True,
+#             alpha=0.5,
+#             ax=axes[i],
+#             cmap="viridis"
+#         )
+
+#         axes[i].set_title(f"Density Plot for {category}")
+#         axes[i].set_xlabel("t-SNE 1")
+#         axes[i].set_ylabel("t-SNE 2")
+
+#     plt.tight_layout()
+#     plt.suptitle("t-SNE Density Plots by Category", y=1.02)
+#     if save_pt:
+#         plt.savefig(save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1)
+#     plt.show()
 
 
 
@@ -278,16 +390,17 @@ def plot_tsne(tsne_df, color='age_group', cluster_colors=None, vmin=None, vmax=N
 def highlight_pattern_in_tsne(tsne_df, label='Cluster', cmap="coolwarm", 
                               max_size=50, min_size=10, 
                               max_alpha=1.0, min_alpha=0.2, 
-                              save_pt=None):
+                              figsize=None, save_pt=None):
     fea_df = tsne_df.copy()
     unique_clusters = sorted(fea_df[label].unique())
     num_clusters = len(unique_clusters)
     grid_size = int(np.ceil(np.sqrt(num_clusters)))
 
-    fig, axes = plt.subplots(grid_size, grid_size, figsize=(grid_size * 4, grid_size * 4))
+    fig, axes = plt.subplots(grid_size, grid_size, figsize=figsize)
     axes = axes.flatten()
-    sns.set_style("whitegrid")
-    color_palette = sns.color_palette(cmap, as_cmap=False, n_colors=num_clusters)
+    sns.set_style("white")  
+    colormap = plt.colormaps[cmap] 
+    
     for i, cluster in enumerate(unique_clusters):
         ax = axes[i]
         fea_df["color"] = fea_df[label].apply(lambda x: 1 if x == cluster else 0)
@@ -302,109 +415,53 @@ def highlight_pattern_in_tsne(tsne_df, label='Cluster', cmap="coolwarm",
             s=fea_df["size"],
             edgecolors="k", linewidth=0.3
         )
-
+        
         ax.set_title(f"Highlighting Cluster {cluster}", fontsize=12)
         ax.set_xlabel("t-SNE 1", fontsize=10)
         ax.set_ylabel("t-SNE 2", fontsize=10)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_frame_on(False)
 
-        if i >= len(unique_clusters):
-            fig.delaxes(ax)
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
 
-    handles, labels = scatter.legend_elements(prop="sizes", alpha=0.6)
+    blue_color = colormap(0)
+    red_color = colormap(0.999)  
+    legend_handles = [
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=blue_color, markersize=6, label='Other clusters'),
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=red_color, markersize=10, label='Highlighted cluster')
+    ]
     legend = fig.legend(
-        handles, ["Background", "Highlighted"], 
-        loc='lower center', 
-        ncol=2, fontsize=12
+        handles=legend_handles, 
+        loc="center left", 
+        bbox_to_anchor=(0.9, 0.5), 
+        fontsize=12, frameon=False
     )
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    plt.tight_layout(rect=[0, 0, 0.9, 1])  # Adjust layout for legend space
     if save_pt:
         plt.savefig(save_pt, bbox_inches="tight", dpi=300)
-    plt.show()
-
-    
-
-
-def Cluster_AgeGroups_heatmap(tsne_df, save_pt=None):
-    proportions = tsne_df.groupby(['age_group', 'Cluster']).size().unstack(fill_value=0)
-    proportions = proportions.div(proportions.sum(axis=1), axis=0)  # Normalize to 100%
-    proportions = proportions.reset_index().melt(id_vars="age_group", value_vars=proportions.columns, var_name="Cluster", value_name="proportion")
-    
-    heatmap_data = proportions.pivot(index="age_group", columns="Cluster", values="proportion")
-    desired_order = ['P0', 'P1', 'P2', 'P3']
-    available_columns = [col for col in desired_order if col in heatmap_data.columns]
-    if len(available_columns) == len(desired_order):
-        # Reorder the columns
-        heatmap_data = heatmap_data[available_columns]
-    else:
-        print("Mismatch in columns. Available columns:", heatmap_data.columns)
-
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(heatmap_data, annot=True, cmap="YlGnBu", cbar_kws={'label': 'Proportion'}, fmt='.2f',
-                annot_kws={'size': 16})
-    plt.title("Heatmap of Cluster Proportions by Age Group", fontsize=12)
-    plt.xlabel("Cluster", fontsize=12)
-    plt.ylabel("Age Group", fontsize=12)
-    plt.tight_layout()
-    if save_pt is not None:
-        plt.savefig(fname=save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1)
-    plt.show()
-
-
-
-
-def Cluster_AgeGroups_barplot(tsne_df, save_pt):
-    proportions = tsne_df.groupby(['age_group', 'Cluster']).size().unstack(fill_value=0)
-    proportions = proportions.div(proportions.sum(axis=1), axis=0)  # Normalize to 100%
-    proportions = proportions.reset_index().melt(id_vars="age_group", value_vars=proportions.columns, 
-                                                 var_name="Cluster", value_name="proportion")
-    
-    plt.figure(figsize=(10, 6))
-    sns.barplot(data=proportions, x='age_group', y='proportion', hue='Cluster', palette='Set2')
-    plt.title("Proportional Barplot of Cluster Proportions by Age Group", fontsize=14)
-    plt.xlabel("Age Group", fontsize=12)
-    plt.ylabel("Proportion", fontsize=12)
-    plt.legend(title="Cluster", bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    if save_pt is not None:
-        plt.savefig(save_pt, format="pdf", dpi=300)
-    plt.show()
-
-
-
-
-def plot_Attentions_violinplot(tsne_df, save_pt=None):
-    attention_columns = ['attention_0', 'attention_1', 'attention_2']
-    attention_df = tsne_df[['Cluster'] + attention_columns]
-    attention_df = attention_df.melt(id_vars="Cluster", value_vars=attention_columns, var_name="Attention Type", value_name="Attention Value")
-    cluster_order = ['P0', 'P1', 'P2', 'P3']
-    cluster_colors = {'P0': '#A6C8E1', 'P1': '#B1DED6', 'P2': '#FEF39E', 'P3': '#E5E5E5'}
-    
-    g = sns.FacetGrid(attention_df, col="Attention Type", hue="Cluster", height=5, aspect=1.2, sharey=False)
-    g.map(sns.violinplot, "Cluster", "Attention Value", palette=cluster_colors, inner=None, scale="area", width=0.5, order=cluster_order)
-    g.map(sns.boxplot, "Cluster", "Attention Value", palette=cluster_colors, showfliers=True, width=0.2, 
-          flierprops=dict(marker='o', color='black', markersize=1.25, alpha=0.5), order=cluster_order)
-    g.set_axis_labels("Cluster", "Attention Value")
-    g.set_titles("{col_name}")
-    g.fig.suptitle("Attention Value Distribution Across Clusters for Each Attention Branch", fontsize=16)
-    g.fig.subplots_adjust(top=0.85)
-    g.add_legend(title="Cluster")
-    plt.tight_layout()
-    if save_pt is not None:
-        plt.savefig(fname=save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1)
     plt.show()
 
 
 
 
 def parse_wsi_id(patch_id):
-    if " HE" in patch_id: # NKI
+    if "K" in patch_id: # SGK
+        wsi_id = patch_id.split("_")[0]
+    elif " HE" in patch_id: # NKI
         wsi_id = patch_id.split(" HE")[0]
+    elif "_HE" in patch_id: # NKI
+        wsi_id = patch_id.split("_HE")[0]
     elif "_FPE_" in patch_id: # KHP
         wsi_id = "_".join(patch_id.split("_")[:3])
-    else: # rest
-        wsi_id = patch_id.split("_")[0]
+    elif "Human" in patch_id:
+        wsi_id = patch_id.split("_HE.vsi")[0]
+    else: # BCI
+        wsi_id = "_".join(patch_id.split("_")[:-7])
     return wsi_id
+
 
 
 def get_xy(patch_id):
@@ -467,55 +524,341 @@ def paste_HE_on_tsne(tsne_df, WSI_folder='/scratch_tmp/prj/cb_normalbreast/prj_B
 
 
 
-def visualize_top_patches(tsne_df, label='Cluster', patch_num=25, WSIs='/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/WSIs', save_pt=None):
-    for cluster_id in np.unique(tsne_df[label]):
-        patch_ids = tsne_df.loc[tsne_df[label] == cluster_id, "patch_id"].tolist()
-        if not patch_ids:
-            print(f"[INFO] Skipping cluster {cluster_id}: No patches found.")
-            continue
 
-        patch_ids = random.sample(patch_ids, min(patch_num, len(patch_ids)))
-        patch_list = []
-        for patch_id in patch_ids:
+
+def get_Cluster_example(tsne_df, cluster_id, im_num, WSIs="/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/WSIs"):
+    patch_ids = tsne_df.loc[tsne_df["Cluster"] == cluster_id, "patch_id"].values.tolist()
+    random.shuffle(patch_ids)
+
+    img_list = []
+    attempted = 0
+
+    for patch_id in patch_ids:
+        if len(img_list) >= im_num:
+            break
+        try:
             wsi_id = parse_wsi_id(patch_id)
             wsi_path_list = glob.glob(f"{WSIs}/*/{wsi_id}*.*")
+            
             if not wsi_path_list:
-                print(f"[WARNING] No WSI found for {wsi_id}. Skipping patch {patch_id}.")
+                print(f"[WARNING] No WSI found for {wsi_id}. Skipping.")
                 continue
-            try:
-                wsi = openslide.OpenSlide(wsi_path_list[0])
-                x, y, patch_size = get_xy(patch_id)
-                patch_im = np.array(wsi.read_region((x, y), 0, (patch_size, patch_size)).convert("RGB"))
-                patch_list.append(patch_im)
-            except Exception as e:
-                print(f"[ERROR] Failed to process WSI {wsi_id} for patch {patch_id}: {e}")
-                continue
-            if len(patch_list) >= patch_num:
-                break
 
-        if not patch_list:
-            print(f"[INFO] Skipping cluster {cluster_id}: No valid patches extracted.")
+            wsi = openslide.OpenSlide(wsi_path_list[0])
+            x, y, patch_size = get_xy(patch_id)
+            im = wsi.read_region((x, y), 0, (patch_size, patch_size)).convert("RGB")
+            img_list.append(im)
+            attempted += 1
+
+        except Exception as e:
+            print(f"[ERROR] Skipping patch {patch_id}: {e}")
             continue
 
-        grid_size = math.ceil(math.sqrt(len(patch_list)))
-        sns.set_theme(style='white')
-        fig = plt.figure(figsize=(6, 6))
-        plt.title(f"Cluster {cluster_id}", fontsize=12)
-        plt.axis("off")
-        grid = ImageGrid(fig, 111, nrows_ncols=(grid_size, grid_size), axes_pad=0.05)
-        for ax, im in zip(grid, patch_list):
-            ax.imshow(im)
-            ax.set_xticks([])
-            ax.set_yticks([])
-            for spine in ax.spines.values():
-                spine.set_visible(False)
+    print(f"[INFO] Cluster {cluster_id}: Collected {len(img_list)} valid patches (attempted {attempted}).")
 
-        if save_pt:
-            save_path = f"{save_pt}_cluster{cluster_id}.png"
-            plt.savefig(save_path, bbox_inches="tight", dpi=300)
-            print(f"[INFO] Saved visualization for cluster {cluster_id} at {save_path}")
-        plt.show()
+    return img_list
 
+
+
+
+
+def compute_adjusted_pvalues_global(df, features, group_label, group_order, save_pt=None):
+    p_value_table = []  
+    for feature in features:
+        p_values = []
+        comparisons = []
+
+        # Group the data by the group_label
+        grouped_data = [df[df[group_label] == group][feature].dropna() for group in group_order]
+        
+        # Perform Kruskal-Wallis test across all groups
+        stat, p = kruskal(*grouped_data)
+        
+        # Store the p-value for the feature
+        p_values.append(p)
+        comparisons.append((feature, "All Groups"))
+
+        # Adjust p-values using Benjamini-Hochberg (FDR)
+        _, adj_p_values, _, _ = multipletests(p_values, method='fdr_bh')
+
+        # Store the adjusted p-value and significance
+        for (feature, comparison), adj_p in zip(comparisons, adj_p_values):
+            significance = '***' if adj_p < 0.001 else '**' if adj_p < 0.01 else '*' if adj_p < 0.05 else ''
+            p_value_table.append({'Feature': feature, 'Comparison': comparison, 'Adjusted p-value': adj_p, 'Significance': significance})
+
+    p_value_df = pd.DataFrame(p_value_table)
+    if save_pt is not None:
+        p_value_df.to_csv(save_pt, index=False)
+
+    return p_value_df
+
+
+
+
+def compute_adjusted_pvalues(df, features, group_label, group_order, save_pt=None):
+    p_value_table = []  
+    for feature in features:
+        p_values = []
+        comparisons = []
+
+        for (c1, c2) in combinations(group_order, 2):
+            group1 = df[df[group_label] == c1][feature]
+            group2 = df[df[group_label] == c2][feature]
+            
+            if len(group1) > 0 and len(group2) > 0:
+                stat, p = ranksums(group1, group2)
+                p_values.append(p)
+                comparisons.append((feature, c1, c2))
+
+        # Adjust p-values using Benjamini-Hochberg (FDR)
+        _, adj_p_values, _, _ = multipletests(p_values, method='fdr_bh')
+
+        for (feature, cluster1, cluster2), adj_p in zip(comparisons, adj_p_values):
+            # Assign significance based on adjusted p-value
+            significance = '***' if adj_p < 0.001 else '**' if adj_p < 0.01 else '*' if adj_p < 0.05 else ''
+            p_value_table.append({'Feature': feature, 'Group 1': cluster1, 'Group 2': cluster2, 'Adjusted p-value': adj_p, 'Significance': significance})
+
+    p_value_df = pd.DataFrame(p_value_table)
+    if save_pt is not None:
+        p_value_df.to_csv(save_pt, index=False)
+
+    return p_value_df
+
+
+
+
+def compute_whisker_limits(df, feature, group_label, group_order, showfliers):
+    df[feature] = pd.to_numeric(df[feature], errors='coerce')
+
+    if showfliers:
+        uppers = []
+        lowers = []
+        
+        for group in group_order:
+            group_data = df[df[group_label] == group][feature]
+            uppers.append(max(group_data))
+            lowers.append(min(group_data))
+            
+        upper = max(uppers)
+        lower = min(lowers)
+        y_range = upper - lower
+        y_pos = upper + 0.03 * y_range  # Increase the offset space for p-value annotations
+
+    else:
+        upper_whiskers = []
+        lower_whiskers = []
+        
+        for group in group_order:
+            group_data = df[df[group_label] == group][feature]
+            
+            Q1 = group_data.quantile(0.25)
+            Q3 = group_data.quantile(0.75)
+            IQR = Q3 - Q1
+            lower_whisker_limit = Q1 - 1.5 * IQR
+            upper_whisker_limit = Q3 + 1.5 * IQR
+            
+            # Append whisker limits
+            upper_whiskers.append(upper_whisker_limit)
+            lower_whiskers.append(lower_whisker_limit)
+            
+            # Optionally: Clip the data for the actual whiskers (for visualizations)
+            # This step can help ensure the whiskers are correctly visualized without outliers
+            group_data_clipped = group_data.clip(lower=lower_whisker_limit, upper=upper_whisker_limit)
+    
+        # Determine the y-position and range for the whiskers
+        upper_whisker_max = max(upper_whiskers)
+        lower_whisker_min = min(lower_whiskers)
+        y_range = upper_whisker_max - lower_whisker_min
+        y_pos = upper_whisker_max + 0.03 * y_range  # Adjust the y_pos for the plot
+
+    return y_pos, y_range
+
+
+
+
+def annotate_pvalues(ax, pval_df, group_order, y_pos, y_range):
+    """Annotate violin plot with significance bars at incrementally moved y_pos."""
+    offset = 0.08 * y_range  
+    last_y_pos = y_pos
+    for i, row in pval_df.iterrows():
+        g1, g2, significance = row["Group 1"], row["Group 2"], row["Significance"]
+        if significance:
+            x1, x2 = group_order.index(g1), group_order.index(g2)
+            ax.plot([x1, x1, x2, x2], [last_y_pos, last_y_pos + 0.02 * y_range , last_y_pos + 0.02 * y_range , last_y_pos], lw=1.2, c="black")
+            ax.text((x1 + x2) / 2, last_y_pos + 0.01 * y_range , significance, ha="center", va="bottom", fontsize=12, color="black")
+            last_y_pos += offset  
+
+
+
+
+def violin_boxplot_with_pvalue(df, feature, group_label, group_order, group_colors, pval_df=None, save_pt=None, ax=None, figsize= (8, 6)):
+    df[feature] = pd.to_numeric(df[feature], errors="coerce")
+    df_filtered = df.groupby(group_label, group_keys=False).apply(
+        lambda g: g[g[feature].between(g[feature].quantile(0.01), g[feature].quantile(0.99))]
+    )
+
+    
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure  # Use the existing figure if ax is passed
+        
+    sns.violinplot(data=df_filtered, x=group_label, y=feature, hue=group_label,
+               order=group_order, palette=group_colors, inner=None, density_norm="area",
+               width=0.8, cut=0, ax=ax)
+    
+    sns.boxplot(
+        data=df_filtered, x=group_label, y=feature, order=group_order, 
+        showfliers=True, width=0.2, 
+        flierprops={"marker": "o", "markersize": 2, "markerfacecolor": "black", "markeredgecolor": "black", "alpha": 0.8},
+        boxprops={"facecolor": "white", "alpha": 0.7, "edgecolor": "black", "linewidth": 1.2},
+        medianprops={"color": "black", "linewidth": 1.5},
+        whiskerprops={"linewidth": 1.2},
+        ax=ax
+    )
+
+    
+    if pval_df is not None:
+        y_pos, y_range = compute_whisker_limits(df_filtered, feature, group_label, group_order, showfliers=True)
+        annotate_pvalues(ax, pval_df.loc[pval_df['Feature'] == feature, :].copy(), group_order, y_pos, y_range)
+
+    
+    ax.set_xlabel("Group", fontsize=12)
+    ax.set_ylabel("Value", fontsize=12)
+    ax.set_title(f"Violin & Box Plot of Attention Value: {feature}", fontsize=12)
+    if save_pt is not None:
+        plt.savefig(save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1)
+
+    return fig  
+
+
+
+
+def boxplot_with_pvalue(df, feature, group_label, group_order, group_colors, pval_df=None, save_pt=None, ax=None, figsize=(8, 6), box_width=0.5):
+    df[feature] = pd.to_numeric(df[feature], errors="coerce")  # Ensure numeric values
+    
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure  
+
+    df_filtered = df.groupby(group_label, group_keys=False).apply(
+        lambda g: g[g[feature].between(g[feature].quantile(0.01), g[feature].quantile(0.99))]
+    )
+
+    color_list = [group_colors[cl] for cl in group_order if cl in group_colors]
+
+    sns.boxplot(
+        data=df_filtered, x=group_label, y=feature, order=group_order, 
+        palette=color_list,  # Use mapped colors
+        showfliers=False, width=box_width, 
+        flierprops={"marker": "o", "markersize": 2, "markerfacecolor": "black", "markeredgecolor": "black", "alpha": 0.8},
+        medianprops={"color": "black", "linewidth": 1.5},
+        whiskerprops={"linewidth": 1.2},
+        ax=ax
+    )
+
+    if pval_df is not None:
+        y_pos, y_range = compute_whisker_limits(df_filtered, feature, group_label, group_order, showfliers=False)
+        annotate_pvalues(ax, pval_df.loc[pval_df['Feature'] == feature, :].copy(), group_order, y_pos, y_range)
+
+    ax.set_xlabel("Group", fontsize=12)
+    ax.set_ylabel("Value", fontsize=12)
+    ax.set_title(f"Box Plot of {feature}", fontsize=12)
+
+    if save_pt is not None:
+        plt.savefig(save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1)
+
+    return fig
+
+
+
+
+def lobulemask_fromAnnotation(wsi_path=None, anno_pt=None):
+    slide = openslide.OpenSlide(wsi_path)
+    
+    with open(anno_pt, "r") as f:
+        shapes = json.load(f)
+
+    level = slide.level_count - 1
+    scale_factor = 1 / slide.level_downsamples[level]
+    width, height = slide.level_dimensions[level]
+
+    mask = np.full((height, width, 3), np.nan, dtype=np.float32)
+
+    class_colors = {
+        "3": (33, 103, 172),  # Blue
+        "2": (191, 212, 179), # Light Green
+        "1": (179, 31, 44)    # Red
+    }
+
+    for shape in shapes.get("features", []):
+        try:
+            points = np.array(shape["geometry"]["coordinates"][0], dtype=np.float32)
+            points *= scale_factor
+            points = points.astype(int)
+
+            cls = shape["properties"].get("classification", {}).get("name", "")
+            color = class_colors.get(cls, (0, 0, 0))  # Default to black if class is unknown
+            
+            if cls in class_colors:
+                cv2.drawContours(mask, [points], -1, color=color, thickness=1)
+                cv2.fillPoly(mask, [points], color=color)
+            else:
+                print(f"[WARNING] Unknown class '{cls}' in annotation file. Skipping...")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to process annotation: {e}")
+
+    mask[np.isnan(mask)] = 0
+    mask = mask.astype(np.uint8)
+
+    return mask
+
+
+
+
+
+def plot_branch_attention_heatmap(df, branch, upscale_factor=64, ax=None):
+    df = df.dropna(subset=['coord_X', 'coord_Y']).copy()
+    df[f'attention_{branch}'] = pd.to_numeric(df[f'attention_{branch}'], errors='coerce')
+    attention = df[f'attention_{branch}'].values
+
+    img_width = int(df['coord_X'].max()) + 1
+    img_height = int(df['coord_Y'].max()) + 1
+    img = np.full((img_height, img_width), np.nan)
+    for x, y, a in zip(df['coord_X'], df['coord_Y'], attention):
+        img[int(y), int(x)] = a  
+
+    created_fig = False
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 6))
+        created_fig = True
+    else:
+        fig = None
+
+    abs_max = np.nanmax(np.abs(attention))
+    vmin, vmax = -abs_max, abs_max
+    img_upscaled = zoom(img, upscale_factor, order=1)  # Bilinear interpolation
+
+    norm = SymLogNorm(linthresh=0.1, vmin=vmin, vmax=vmax)
+    im = ax.imshow(img_upscaled, cmap='seismic', norm=norm, interpolation='bilinear')
+
+    cbar = plt.colorbar(im, ax=ax, fraction=0.03, pad=0.04, aspect=16)
+    tick_values = np.array([-1, -0.1, 0, 0.1, 1])  
+    cbar.set_ticks(tick_values)
+    cbar.set_ticklabels(["-1", "-0.1", "0", "0.1", "1"])
+
+    cbar.set_label('Attention Value', fontsize=8)
+    for tick in cbar.ax.get_yticklabels():
+        tick.set_fontsize(8)
+    ax.set_title(f'Attention Heatmap (Branch {branch})', fontsize=10)
+    ax.axis('off')
+
+    if created_fig:
+        plt.tight_layout()
+        return fig
+    return None
 
 
 
@@ -545,10 +888,13 @@ class WSIDataset(Dataset):
         return patch_ids, torch.tensor(patches, dtype=torch.float32)
 
 
+
 def WSI_loader(df, batch_size=256, bag_size=250, shuffle=False):
     dataset = WSIDataset(df, bag_size)  # Create the custom dataset
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)  # Create DataLoader
     return dataloader
+
+
 
 
 def run_BreastAgeNet_through_WSI(model, wsi_id=None, batch_size=4, bag_size=250, folder=None):
@@ -606,8 +952,21 @@ def run_BreastAgeNet_through_WSI(model, wsi_id=None, batch_size=4, bag_size=250,
 
 
 
-def apply_kmeans(WSI_df, reference, kmeans_model):
 
+def train_kmeans(reference, n_clusters=4):
+    embedding_columns = [f'embedding_{i}' for i in range(512)]  # Adjust if necessary
+    reference = reference.copy()
+    reference[embedding_columns] = reference[embedding_columns].apply(pd.to_numeric, errors='coerce')
+    reference.dropna(subset=embedding_columns, inplace=True)
+    assert reference[embedding_columns].isnull().sum().sum() == 0, "Reference data contains NaN values."
+    X_train = reference[embedding_columns].values
+    kmeans_model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+    kmeans_model.fit(X_train)
+    return kmeans_model
+
+
+
+def apply_kmeans(WSI_df, reference, kmeans_model):
     embedding_columns = [f'embedding_{i}' for i in range(512)]  # Adjust if necessary
     reference_labels = kmeans_model.predict(reference[embedding_columns].values)
     y_train = reference["Cluster"].values  
@@ -619,7 +978,6 @@ def apply_kmeans(WSI_df, reference, kmeans_model):
         label_mapping[most_common_label] = true_label
     print("Label Mapping:", label_mapping)
 
-    
     WSI_df = WSI_df.drop_duplicates().dropna()
     WSI_df[embedding_columns] = WSI_df[embedding_columns].apply(pd.to_numeric, errors="coerce")
     WSI_df.dropna(subset=embedding_columns, inplace=True)
@@ -631,6 +989,57 @@ def apply_kmeans(WSI_df, reference, kmeans_model):
     WSI_df["Cluster"] = new_labels
 
     return WSI_df
+
+
+
+
+def highlight_a_WSI_in_tsne(new_df, reference, cluster_colors, save_pt):
+    embedding_columns = [f'embedding_{i}' for i in range(512)]
+    X_train = np.array(reference.loc[:, embedding_columns])
+    X_new = new_df[embedding_columns].values
+    
+    pca = PCA(n_components=50)
+    combined_data_pca = pca.fit_transform(np.vstack([X_train, X_new]))
+    tsne = TSNE(n_components=2, random_state=42, perplexity=30, n_iter=1000)
+    combined_tsne = tsne.fit_transform(combined_data_pca)
+    
+    reference_tsne = combined_tsne[:len(reference), :]
+    new_data_tsne = combined_tsne[len(reference):, :]
+    new_df['tsne1'] = new_data_tsne[:, 0]
+    new_df['tsne2'] = new_data_tsne[:, 1]
+    reference['tsne1'] = reference_tsne[:, 0]
+    reference['tsne2'] = reference_tsne[:, 1]
+    
+    marker_styles = {'type1': 'o', 'type2': 'o', 'type3': 'o'}  # Type 1 = Square, Type 2 = Triangle, Type 3 = Diamond
+    lobule_colors = {'type1': '#B31F2C', 'type2': '#BFD4B3', 'type3': '#2167AC'}
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    scatter_reference = ax.scatter(reference['tsne1'], reference['tsne2'],
+                                    c=[cluster_colors[label] for label in reference['Cluster']], 
+                                    alpha=0.05, label='Reference', s=10)
+    
+    for lobule_type, marker in marker_styles.items():
+        subset = new_df[new_df['lobule_type'] == lobule_type]
+        ax.scatter(subset['tsne1'], subset['tsne2'], 
+                   c=[lobule_colors[label] for label in subset['lobule_type']], 
+                   marker=marker, 
+                   label=f'Lobule Type {lobule_type}', 
+                   s=20, alpha=0.7, 
+                   edgecolors='black', 
+                   linewidths=0.2)
+    
+    ax.set_title('t-SNE with Cluster and Lobule Type')
+    ax.set_xlabel('t-SNE Component 1')
+    ax.set_ylabel('t-SNE Component 2')
+    ax.invert_xaxis()
+    ax.invert_yaxis()
+    ax.legend()
+    
+    if save_pt:
+        fig.savefig(save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1)
+    plt.show()
+    
+    return new_df, reference
 
 
 
@@ -650,56 +1059,72 @@ def add_orig_coords(WSI_df):
 
 
 
+
 def draw_wsi_with_clusters(WSI_df, wsi_path=None, cluster_colors=None, level=5, save_pt=None):
-    WSI_df = add_orig_coords(WSI_df)
     patch_size = int(np.unique(WSI_df["patch_size"]))
-    
     wsi = openslide.OpenSlide(wsi_path)
     level_dimensions = wsi.level_dimensions[level]
-    wsi_img = wsi.read_region((0, 0), level, level_dimensions)
-    wsi_img = wsi_img.convert("RGBA")  # Convert to RGBA mode for transparency support
-    scale_factor = wsi.level_downsamples[level]  # Downsampling factor for the chosen level
+    wsi_img = wsi.read_region((0, 0), level, level_dimensions).convert("RGBA")
+    scale_factor = wsi.level_downsamples[level]  
+
+    mpp = float(wsi.properties.get('openslide.mpp-x', 0)) * scale_factor  
+    if mpp == 0:  
+        raise ValueError("Microns per pixel (mpp) information is missing in the WSI metadata.")
     
+    scale_bar_length_mm = 2  
+    scale_bar_length_px = int((scale_bar_length_mm * 1000) / mpp)  
+
     draw = ImageDraw.Draw(wsi_img)
-    box_size = int(patch_size / scale_factor)  # Scale the box size according to the level
-    fill_opacity = 255  # Adjust this to make the filled boxes stronger (0-255, where 255 is fully opaque)
-    border_width = 0  # Set width of the black border around each box
+    box_size = int(patch_size / scale_factor)
+    fill_opacity = 255  
+    border_width = 0  
+
     for _, row in WSI_df.iterrows():
         x_orig, y_orig = row['x_orig'], row['y_orig']
         cluster = row['Cluster']
-            
-        cluster_color = cluster_colors.get(cluster, '#000000')  # Default to black if cluster is not in the map
-        rgb_color = mcolors.hex2color(cluster_color)  # Convert hex color to RGB
-        rgba_color = tuple(int(c * 255) for c in rgb_color) + (fill_opacity,)  # Convert to RGBA
+        cluster_color = cluster_colors.get(cluster, '#000000')
+        rgb_color = mcolors.hex2color(cluster_color)
+        rgba_color = tuple(int(c * 255) for c in rgb_color) + (fill_opacity,)
+
         x_scaled = x_orig / scale_factor
         y_scaled = y_orig / scale_factor
-    
-        draw.rectangle([x_scaled - box_size / 2 - border_width, 
-                        y_scaled - box_size / 2 - border_width, 
-                        x_scaled + box_size / 2 + border_width, 
-                        y_scaled + box_size / 2 + border_width], 
-                       outline="black", width=border_width)
-        draw.rectangle([x_scaled - box_size / 2, 
-                        y_scaled - box_size / 2, 
-                        x_scaled + box_size / 2, 
-                        y_scaled + box_size / 2], 
+
+        draw.rectangle([x_scaled - box_size / 2, y_scaled - box_size / 2,
+                        x_scaled + box_size / 2, y_scaled + box_size / 2], 
                        fill=rgba_color, outline="black")
+
+    margin = 50  
+    x_start = margin
+    y_start = wsi_img.height - margin
+    x_end = x_start + scale_bar_length_px
+    y_end = y_start + 10  
+    draw.rectangle([x_start, y_start, x_end, y_end], fill="black", outline="black")
     
+    # # Add text label (2mm)
+    # font_size = 50
+    # draw.text((x_start, y_start - font_size - 5), "2mm", fill="black")
+
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.imshow(wsi_img)
-    ax.axis('off')  # Hide axes
-    cmap = mcolors.ListedColormap([cluster_colors[0], cluster_colors[1], cluster_colors[2], cluster_colors[3]])
+    ax.axis('off')
+
+    cmap = mcolors.ListedColormap([cluster_colors[i] for i in range(4)])
     norm = mcolors.BoundaryNorm(boundaries=[0, 1, 2, 3, 4], ncolors=4)
-    cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=cmap, norm=norm), ax=ax, orientation='vertical', shrink=0.5, fraction=0.02, pad=0.04)
+    cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=cmap, norm=norm), ax=ax, orientation='vertical', 
+                        shrink=0.5, fraction=0.02, pad=0.04)
     cbar.set_ticks([0, 1, 2, 3])
     cbar.set_ticklabels([0, 1, 2, 3])
+
     if save_pt:
         plt.savefig(save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1, format='pdf')
+
     plt.show()
+    
     return WSI_df, wsi_img
 
 
-def plot_cluster_proportion_for_a_WSI(WSI_df, save_pt):
+
+def plot_cluster_proportion_for_a_WSI(WSI_df, save_pt=None, normalize=False):
     phenotype_counts = WSI_df['Cluster'].value_counts().sort_index()
     ordered_phenotypes = [0, 1, 2, 3]
 
@@ -708,20 +1133,28 @@ def plot_cluster_proportion_for_a_WSI(WSI_df, save_pt):
             phenotype_counts[phenotype] = 0
 
     phenotype_counts = phenotype_counts[ordered_phenotypes].sort_index()
-    plt.figure(figsize=(3, 3))
+
+    if normalize:
+        phenotype_counts = phenotype_counts / phenotype_counts.sum()  # Convert to proportions
+
     cluster_colors = {0: '#8da0cb', 1: '#66c2a5', 2: '#ffd92f', 3: '#b3b3b3'}
-    x_pos = range(len(ordered_phenotypes))
 
-    for i, phenotype in enumerate(ordered_phenotypes):
-        plt.bar(x_pos[i], phenotype_counts[phenotype], color=cluster_colors[phenotype], label=phenotype)
+    fig, ax = plt.subplots(figsize=(3, 3))
+    
+    bottom = np.zeros(1)  # Initialize stacking base
+    for phenotype in ordered_phenotypes:
+        ax.bar(0, phenotype_counts[phenotype], color=cluster_colors[phenotype], label=f'P{phenotype}', bottom=bottom)
+        bottom += phenotype_counts[phenotype]  # Update stacking position
 
-    plt.title("Phenotype Counts for WSI")
-    plt.ylabel("Count")
-    plt.xlabel("Phenotype")
-    plt.xticks(x_pos, ['P0', 'P1', 'P2', 'P3'])
+    ax.set_title("Cluster Proportions for WSI" if normalize else "Cluster Counts for WSI")
+    ax.set_ylabel("Proportion" if normalize else "Count")
+    ax.set_xticks([0])
+    ax.set_xticklabels(["WSI"])
+    ax.legend(title="Cluster", bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0)
+    
     if save_pt:
         plt.savefig(save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1, format='pdf')
-    plt.grid(False)
+
     plt.show()
 
 
@@ -776,6 +1209,96 @@ def clusters_json_for_a_WSI(WSI_df, wsi_id, cluster_colors, json_dir=None, requi
 
 
 
+def plot_stacked_bar_and_age_group_annotation(df, figsize=(12, 10), save_pt=None):
+    cluster_counts = df.groupby(['wsi_id', 'Cluster']).size().reset_index(name='Count')
+    total_counts = cluster_counts.groupby('wsi_id')['Count'].transform('sum')
+    cluster_counts['Proportion'] = cluster_counts['Count'] / total_counts
+    cluster_pivot = cluster_counts.pivot_table(index='wsi_id', columns='Cluster', values='Proportion', aggfunc='sum')
+    wsi_order = df[['wsi_id', 'age']].drop_duplicates().sort_values('age')['wsi_id']
+    cluster_pivot = cluster_pivot.loc[wsi_order]
+    cluster_pivot = cluster_pivot[[0, 1, 3, 2]]  # 0->P0, 1->P1, 3->P3, 2->P2
+
+    cluster_colors = {0: '#8da0cb', 1: '#66c2a5', 2: '#ffd92f', 3: '#b3b3b3'}
+    age_group_colors = {0: '#262262', 1: '#87ACC5', 2: '#00A261', 3: '#FFF200'}
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize, gridspec_kw={'height_ratios': [0.2, 0.8]})
+    
+    age_groups = df[['wsi_id', 'age_group']].drop_duplicates().sort_values('wsi_id')
+    age_groups = age_groups.set_index('wsi_id').loc[wsi_order].reset_index()
+    age_group_numeric = age_groups['age_group'].map({0: 0, 1: 1, 2: 2, 3: 3})
+    age_group_matrix = pd.DataFrame(age_group_numeric.values, columns=['Age Group'], index=age_groups['wsi_id'])
+
+    custom_cmap = ListedColormap([age_group_colors[i] for i in age_group_colors.keys()])
+
+    sns.heatmap(age_group_matrix.T, cmap=custom_cmap, cbar=False, linewidths=0, linecolor='white', 
+                xticklabels=False, yticklabels=False, ax=ax1)
+    ax1.set_xlabel('WSI', fontsize=10)
+    ax1.set_title('Age Group Annotations (Heatmap)', fontsize=12)
+
+    cluster_pivot.plot(kind='bar', stacked=True, color=[cluster_colors[i] for i in cluster_pivot.columns], width=0.95, ax=ax2)
+    ax2.set_xlabel("WSI", fontsize=12)
+    ax2.set_ylabel("Proportion of P0-P3 by Cluster", fontsize=12)
+    ax2.set_title("Stacked Barplot of Proportions by Cluster for Each WSI", fontsize=16)
+    ax2.legend(title="Cluster", labels=["P0", "P1", "P3", "P2"], bbox_to_anchor=(1, 1))
+
+    plt.tight_layout()
+    if save_pt:
+        plt.savefig(save_pt, bbox_inches='tight')
+        print(f"Plot saved at {save_pt}")
+    else:
+        plt.show()
+
+
+
+
+# def Cluster_proportion_heatmap(tsne_df, save_pt=None):
+#     proportions = tsne_df.groupby(['age_group', 'Cluster']).size().unstack(fill_value=0)
+#     proportions = proportions.div(proportions.sum(axis=1), axis=0)  # Normalize to 100%
+#     proportions = proportions.reset_index().melt(id_vars="age_group", value_vars=proportions.columns, var_name="Cluster", value_name="proportion")
+    
+#     heatmap_data = proportions.pivot(index="age_group", columns="Cluster", values="proportion")
+#     desired_order = ['P0', 'P1', 'P2', 'P3']
+#     available_columns = [col for col in desired_order if col in heatmap_data.columns]
+#     if len(available_columns) == len(desired_order):
+#         # Reorder the columns
+#         heatmap_data = heatmap_data[available_columns]
+#     else:
+#         print("Mismatch in columns. Available columns:", heatmap_data.columns)
+
+#     plt.figure(figsize=(8, 6))
+#     sns.heatmap(heatmap_data, annot=True, cmap="YlGnBu", cbar_kws={'label': 'Proportion'}, fmt='.2f',
+#                 annot_kws={'size': 16})
+#     plt.title("Heatmap of Cluster Proportions by Age Group", fontsize=12)
+#     plt.xlabel("Cluster", fontsize=12)
+#     plt.ylabel("Age Group", fontsize=12)
+#     plt.tight_layout()
+#     if save_pt is not None:
+#         plt.savefig(fname=save_pt, dpi=300, bbox_inches='tight', pad_inches=0.1)
+#     plt.show()
+
+
+
+
+# def Cluster_proportion_barplot(tsne_df, save_pt):
+#     proportions = tsne_df.groupby(['age_group', 'Cluster']).size().unstack(fill_value=0)
+#     proportions = proportions.div(proportions.sum(axis=1), axis=0)  # Normalize to 100%
+#     proportions = proportions.reset_index().melt(id_vars="age_group", value_vars=proportions.columns, 
+#                                                  var_name="Cluster", value_name="proportion")
+    
+#     plt.figure(figsize=(10, 6))
+#     sns.barplot(data=proportions, x='age_group', y='proportion', hue='Cluster', palette='Set2')
+#     plt.title("Proportional Barplot of Cluster Proportions by Age Group", fontsize=14)
+#     plt.xlabel("Age Group", fontsize=12)
+#     plt.ylabel("Proportion", fontsize=12)
+#     plt.legend(title="Cluster", bbox_to_anchor=(1.05, 1), loc='upper left')
+#     plt.xticks(rotation=45)
+#     plt.tight_layout()
+#     if save_pt is not None:
+#         plt.savefig(save_pt, format="pdf", dpi=300)
+#     plt.show()
+
+
+
 def plot_oneline(img_list, caption_list, figure_size, save_pt=None):
     fig, axes = plt.subplots(1, len(img_list), figsize=figure_size)
     
@@ -795,33 +1318,43 @@ def plot_oneline(img_list, caption_list, figure_size, save_pt=None):
 
 
     
-    
-def plot_multiple(img_list, caption_list, grid_x, grid_y, figure_size, title=None, save_pt=None, cmap=None):
-    fig, axes = plt.subplots(grid_x, grid_y, figsize=figure_size)
-    if title is not None:
-        plt.suptitle(title, fontsize=16)
 
-    counter = 0
-    for x in range(grid_x):
-        for y in range(grid_y):
-            if counter < len(img_list):
-                # Apply colormap if provided
-                axes[x][y].imshow(img_list[counter], cmap=cmap)
-                axes[x][y].axis("off")  # Hide axis for a cleaner image display
-                if caption_list is not None and counter < len(caption_list):
-                    axes[x][y].set_title(f"{caption_list[counter]}")
-                counter += 1
-            else:
-                axes[x][y].axis("off")  # Hide unused subplots
+def plot_multiple(img_list, caption_list=None, grid_x=4, grid_y=4, figure_size=(10, 10), title=None, save_pt=None):
+    fig, axes = plt.subplots(grid_y, grid_x, figsize=figure_size)
+    axes = axes.flatten()
 
-    if save_pt is not None:
-        plt.savefig(save_pt, pad_inches=0, bbox_inches="tight", dpi=300)
-    
-    plt.show()
+    # Loop through the images and plot them on the subplots
+    for i, img in enumerate(img_list):
+        axes[i].imshow(img)
+        axes[i].axis('off')  # Hide axes
+        if caption_list:
+            axes[i].set_title(str(caption_list[i]), fontsize=8)
+
+    # Turn off axes for any unused subplots
+    for j in range(len(img_list), len(axes)):
+        axes[j].axis('off')
+
+    # Set the overall title if provided
+    if title:
+        fig.suptitle(title, fontsize=16)
+
+    # Adjust the layout and make sure there's no clipping
+    plt.tight_layout()
+
+    # Save or display the figure
+    if save_pt:
+        plt.savefig(save_pt, bbox_inches='tight', dpi=300)
+        print(f"[INFO] Saved plot to {save_pt}")
+        plt.close(fig)
+    else:
+        plt.show()
+
+    return fig
 
 
 
-def sample_k_patches(wsi, patch_ids, num=25, aug=False):
+
+def sample_k_patches_showStainGeneralisation(wsi, patch_ids, num=25, aug=False):
     img_list = []  # List to store the sampled patches
     Augimg_list = []  # List to store augmented patches if augmentation is applied
     
@@ -910,46 +1443,4 @@ def assign_annotation_labels(patch_df, annotation_files):
     patch_df['annotation_label'] = labels
     
     return patch_df
-
-
-
-def lobulemask_fromAnnotation(wsi_path=None, anno_pt=None):
-    slide = openslide.OpenSlide(wsi_path)
-    HE_img = np.array(slide.read_region((0, 0), slide.level_count-1, slide.level_dimensions[slide.level_count-1]).convert("RGB"))
-    
-    with open(anno_pt, "r") as f:
-        shapes = json.load(f)
-    
-    level = slide.level_count - 1
-    scale_factor = 1 / slide.level_downsamples[level]
-    width, height = slide.level_dimensions[level]
-    
-    # Set the background to NaN
-    mask = np.full((height, width, 3), np.nan, dtype=np.float32)  # NaN background
-    
-    # Iterate through the shapes and add colored regions based on class
-    for shape in shapes["features"]:
-        points = shape["geometry"]["coordinates"][0]
-        points = np.array([(p[0], p[1]) for p in points])
-        points = points * scale_factor
-        points = points.astype(int)
-    
-        cls = shape["properties"]["classification"]["name"]
-        
-        if cls == "3":
-            color = (33, 102, 172)  # Blue (BGR format)
-        elif cls == "2":
-            color = (191, 212, 178)  # Light Green (BGR format)
-        elif cls == "1":
-            color = (178, 24, 43)  # Red (BGR format)
-        
-        # Draw contours and fill the polygons with the specified colors
-        mask = cv2.drawContours(mask, [points], -1, color=color, thickness=1)
-        mask = cv2.fillPoly(mask, [points], color=color)
-        
-    return mask, HE_img
-
-
-
-
 
