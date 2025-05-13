@@ -1,7 +1,5 @@
 import os
 import sys
-sys.path.append('/scratch_tmp/users/k21066795/BreastAgeNet')
-
 import glob
 import random
 import h5py
@@ -18,9 +16,10 @@ import stardist
 from stardist.models import StarDist2D
 from stardist.plot import render_label
 from csbdeep.utils import normalize
-from utils_model import parse_wsi_id
-from utils_features import Reinhard
-from utils_vis import get_xy
+
+from utils.utils_model import parse_wsi_id
+from utils.utils_features import Reinhard
+from utils.utils_vis import get_xy
 
 
 def get_xy(patch_id):
@@ -45,7 +44,6 @@ def crop_im(img, new_width=448,new_height=448):
 
 
 
-
 WSIs = '/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/WSIs'                                             # the folder saving WSIs
 PATCH = "/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/patches/HE"                                      # the folder to save
 NUCLEI = "/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/patches/startdist"                              # the folder to save images of nuclei segmentation
@@ -54,8 +52,6 @@ nuclei_csv = "/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/RESULTs/interpre
 
 # load cluster predictions of the train_NR dataset
 df = pd.read_csv("/scratch_tmp/prj/cb_normalbreast/prj_BreastAgeNet/RESULTs/interpretation/train_NR_4clusters.csv", low_memory=False)
-
-
 
 # randomly sample patches from each cluster
 patch_num = 10000

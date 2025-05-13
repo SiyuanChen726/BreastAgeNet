@@ -1,9 +1,9 @@
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from utils_model import * 
+from utils.utils_model import * 
 
 
-@hydra.main(config_path="/scratch_tmp/users/k21066795/BreastAgeNet/configs/", config_name="config", version_base=None)
+@hydra.main(config_path="./configs/", config_name="config", version_base=None)
 def main(cfg: DictConfig):
     print(OmegaConf.to_yaml(cfg))  
 
