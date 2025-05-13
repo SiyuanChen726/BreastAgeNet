@@ -894,3 +894,42 @@ def get_averaged_outputs(outputs):
     averaged_data = averaged_data.drop_duplicates("wsi_id")
     return averaged_data
 
+
+def test_single_slide(wsi_path, patch_info, age_group):
+    # load UNI model
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    UNI_model, transform = get_model(model_name='UNI', device=device)
+    print(f"device: {device} \nmodel_name: UNI")
+    # vectorise the WSI
+    patch_df = pd.read_csv(patch_info)
+    bag_dataset = Dataset_fromWSI(patch_df, os.path.dirname(wsi_path), stainFunc='reinhard', transforms_eval=transform)
+    h5_path = patch_info.replace("_TC_512_patch_all.csv", "_bagFeature_UNI_reinhard.h5") 
+    print("extract UNI features...")
+    extract_features(UNI_model, bag_dataset, batch_size=16, num_workers=2, device=device, fname=h5_path)
+    # testloader
+    valid_patches = list(patch_df['patch_id'][patch_df['TC_epi'] > 0.9])
+    infer_df = pd.DataFrame({"h5df": [Path(h5_path)], "age_group": [age_group]})
+    test_dblock = DataBlock(blocks = (TransformBlock, CategoryBlock),
+                            get_x = ColReader('h5df'),
+                            get_y = ColReader('age_group'),
+                            item_tfms = MILBagTransform(infer_df.h5df, 250, 0.5, valid_patches))
+    test_dls = test_dblock.dataloaders(infer_df, bs=1, shuffle=False)
+    testloaders = test_dls.test_dl(infer_df, with_labels=True)
+    # load BreastAgeNet
+    print("loading BreastAgeNet...")
+    ckpt_pt = "/app/BreastAgeNet/weights/epi0.9_UNI_250_MultiHeadAttention_full_best.pt"
+    breastagenet = load_BreastAgeNet(ckpt_pt, embed_attn=True)
+    # tissue ageing ranks predictions
+    print("BreastAgeNet predicting...")
+    predictions = test_model_iterations(breastagenet, testloaders, n_iteration = 10)
+    for col in ['branch_0', 'branch_1', 'branch_2']:
+        predictions[col] = pd.to_numeric(predictions[col], errors='coerce')
+    predictions_averaged = predictions.groupby('wsi_id')[['branch_0', 'branch_1', 'branch_2']].mean().reset_index()
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+    for i in range(3):
+        predictions_averaged[f'sigmoid_{i}'] = sigmoid(predictions_averaged[f'branch_{i}'])
+        predictions_averaged[f'binary_{i}'] = (predictions_averaged[f'sigmoid_{i}'] >= 0.5).astype(int)
+    predictions_averaged['final_prediction'] = predictions_averaged[['binary_0', 'binary_1', 'binary_2']].sum(axis=1)
+    predictions_averaged = predictions_averaged.drop_duplicates("wsi_id")
+    return predictions_averaged
