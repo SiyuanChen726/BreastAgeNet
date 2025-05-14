@@ -174,7 +174,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 ++task=train_cv  \
 ++clinic_path=/project/Metadata/train_NR_clean.csv \
 ++FEATURES=/project/FEATUREs  \
-++resFolder=/project/Docker_test/RESULTs/main  \
+++resFolder=/project/RESULTs/main  \
 ++TC_epi=0.9  \
 ++bag_size=250  \
 ++model_name=UNI  \
@@ -207,7 +207,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 ++task=train_full  \
 ++clinic_path=/project/Metadata/train_NR_clean.csv  \
 ++FEATURES=/project/FEATUREs  \
-++resFolder=/project/Docker_test/RESULTs/main  \
+++resFolder=/project/RESULTs/main  \
 ++TC_epi=0.9  \
 ++bag_size=250  \
 ++model_name=UNI  \
@@ -236,7 +236,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 ++task=test_full \
 ++clinic_path=/project/Metadata/test_NR_clean.csv \
 ++FEATURES=/project/FEATUREs \
-++resFolder=/project/Docker_test/RESULTs/main \
+++resFolder=/project/RESULTs/main \
 ++TC_epi=0.9 \
 ++bag_size=250 \
 ++model_name=UNI \
@@ -288,7 +288,7 @@ singularity exec --nv \
     --model phikon \
     --stain augmentation \
     --root /project \
-    --dataset KHP_RM \
+    --dataset KHP \
     --image_type WSI \
     --batch_size 16 \
     --num_workers 8"
@@ -304,7 +304,7 @@ singularity exec --nv \
   ++task=train_cv \
   ++clinic_path=/project/Metadata/train_NR_clean.csv \
   ++FEATURES=/project/FEATUREs \
-  ++resFolder=/project/Docker_test/RESULTs/main \
+  ++resFolder=/project/RESULTs/main \
   ++TC_epi=0.9 \
   ++bag_size=250 \
   ++model_name=UNI \
@@ -321,7 +321,7 @@ singularity exec --nv \
     ++task=train_full \
     ++clinic_path=/project/Metadata/train_NR_clean.csv \
     ++FEATURES=/project/FEATUREs \
-    ++resFolder=/project/Docker_test/RESULTs/main \
+    ++resFolder=/project/RESULTs/main \
     ++TC_epi=0.9 \
     ++bag_size=250 \
     ++model_name=UNI \
@@ -338,7 +338,7 @@ singularity exec --nv \
     ++task=test_full \
     ++clinic_path=/project/Metadata/test_NR_clean.csv \
     ++FEATURES=/project/FEATUREs \
-    ++resFolder=/project/Docker_test/RESULTs/main \
+    ++resFolder=/project/RESULTs/main \
     ++TC_epi=0.9 \
     ++bag_size=250 \
     ++model_name=UNI \
