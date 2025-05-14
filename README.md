@@ -125,7 +125,7 @@ CUDA_VISIBLE_DEVICES=0 python extractFeatures.py \
 --model UNI \
 --stain augmentation \
 --root /project \
---dataset NKI \   
+--dataset NKI \
 --image_type WSI \
 --batch_size 16 \
 --num_workers 8
@@ -236,7 +236,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 ++task=test_full \
 ++clinic_path=/project/Metadata/test_NR_clean.csv \
 ++FEATURES=/project/FEATUREs \
-++resFolder=/project/RESULTs/main \
+++resFolder=/project/Docker_test/RESULTs/main \
 ++TC_epi=0.9 \
 ++bag_size=250 \
 ++model_name=UNI \
@@ -251,7 +251,6 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 Here is an example in python:
 ```
 from utils.utils_model import test_single_slide
-
 wsi_path = "/app/example_data/WSIs/KHP_NR/19001626_FPE_3.ndpi"
 age_group = 0
 patch_info = "/app/example_data/FEATUREs/19001626_FPE_3/19001626_FPE_3_TC_512_patch_all.csv"
@@ -282,80 +281,88 @@ Then, please follow the instructions and launch the Jupyter Lab. The notebooks a
 ### 5.2.1 feature extraction
 ```
 singularity exec --nv \
-  --bind /scratch/prj/cb_normalbreast/prj_BreastAgeNet:/project \
+  --bind /path/to/project:/project \
   ./breastagenet_latest.sif \
-  bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate breastagenet && python /app/BreastAgeNet/extractFeatures.py \
-    --model phikon \
-    --stain augmentation \
-    --root /project \
-    --dataset KHP \
-    --image_type WSI \
-    --batch_size 16 \
-    --num_workers 8"
+  bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+           conda activate breastagenet && \
+           python /app/BreastAgeNet/extractFeatures.py \
+             --model phikon \
+             --stain augmentation \
+             --root /project \
+             --dataset KHP \
+             --image_type WSI \
+             --batch_size 16 \
+             --num_workers 8"
 ```
 
 ### 5.2.2 5-fold CV training
 ```
 singularity exec --nv \
-  --bind /scratch/prj/cb_normalbreast/prj_BreastAgeNet:/project \
+  --bind /path/to/project:/project \
   ./breastagenet_latest.sif \
-  bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate breastagenet && cd /project && \
-  CUDA_VISIBLE_DEVICES=0 python /app/BreastAgeNet/main.py \
-  ++task=train_cv \
-  ++clinic_path=/project/Metadata/train_NR_clean.csv \
-  ++FEATURES=/project/FEATUREs \
-  ++resFolder=/project/RESULTs/main \
-  ++TC_epi=0.9 \
-  ++bag_size=250 \
-  ++model_name=UNI \
-  ++attention=MultiHeadAttention"
+  bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+           conda activate breastagenet && \
+           cd /project && \
+           CUDA_VISIBLE_DEVICES=0 python /app/BreastAgeNet/main.py \
+             ++task=train_cv \
+             ++clinic_path=/project/Metadata/train_NR_clean.csv \
+             ++FEATURES=/project/FEATUREs \
+             ++resFolder=/project/RESULTs/main \
+             ++TC_epi=0.9 \
+             ++bag_size=250 \
+             ++model_name=UNI \
+             ++attention=MultiHeadAttention"
 ```
 
 ### 5.2.3 full dataset training
 ```
 singularity exec --nv \
-  --bind /scratch/prj/cb_normalbreast/prj_BreastAgeNet:/project \
+  --bind /path/to/project:/project \
   ./breastagenet_latest.sif \
-  bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate breastagenet && cd /project && \
-    CUDA_VISIBLE_DEVICES=0 python /app/BreastAgeNet/main.py \
-    ++task=train_full \
-    ++clinic_path=/project/Metadata/train_NR_clean.csv \
-    ++FEATURES=/project/FEATUREs \
-    ++resFolder=/project/RESULTs/main \
-    ++TC_epi=0.9 \
-    ++bag_size=250 \
-    ++model_name=UNI \
-    ++attention=MultiHeadAttention"
+  bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+           conda activate breastagenet && \
+           cd /project && \
+           CUDA_VISIBLE_DEVICES=0 python /app/BreastAgeNet/main.py \
+           ++task=train_full \
+           ++clinic_path=/project/Metadata/train_NR_clean.csv \
+           ++FEATURES=/project/FEATUREs \
+           ++resFolder=/project/RESULTs/main \
+           ++TC_epi=0.9 \
+           ++bag_size=250 \
+           ++model_name=UNI \
+           ++attention=MultiHeadAttention"
 ```
 
 ### 5.2.4 full dataset testing
 ```
 singularity exec --nv \
-  --bind /scratch/prj/cb_normalbreast/prj_BreastAgeNet:/project \
+  --bind /path/to/project:/project \
   ./breastagenet_latest.sif \
-  bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate breastagenet && cd /project && \
-    CUDA_VISIBLE_DEVICES=0 python /app/BreastAgeNet/main.py \
-    ++task=test_full \
-    ++clinic_path=/project/Metadata/test_NR_clean.csv \
-    ++FEATURES=/project/FEATUREs \
-    ++resFolder=/project/RESULTs/main \
-    ++TC_epi=0.9 \
-    ++bag_size=250 \
-    ++model_name=UNI \
-    ++attention=MultiHeadAttention \
-    ++stainFunc=reinhard \
-    ++ckpt_pt=/app/BreastAgeNet/weights/epi0.9_UNI_250_MultiHeadAttention_full_best.pt"
+  bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+           conda activate breastagenet && \
+           cd /project && \
+           CUDA_VISIBLE_DEVICES=0 python /app/BreastAgeNet/main.py \
+             ++task=test_full \
+             ++clinic_path=/project/Metadata/test_NR_clean.csv \
+             ++FEATURES=/project/FEATUREs \
+             ++resFolder=/project/RESULTs/main \
+             ++TC_epi=0.9 \
+             ++bag_size=250 \
+             ++model_name=UNI \
+             ++attention=MultiHeadAttention \
+             ++stainFunc=reinhard \
+             ++ckpt_pt=/app/BreastAgeNet/weights/epi0.9_UNI_250_MultiHeadAttention_full_best.pt"
 ```
 
 ### 5.2.5 Jupyter notebook visualisation
 ```
 singularity exec --nv \
-./breastagenet_latest.sif \
-bash -c 'source /opt/conda/etc/profile.d/conda.sh && \
-conda activate breastagenet && \
-cd /app/BreastAgeNet && \
-python -m ipykernel install --user --name=breastagenet --display-name="breastagenet" && \
-bash run_jupyter.sh'
+  ./breastagenet_latest.sif \
+  bash -c 'source /opt/conda/etc/profile.d/conda.sh && \
+           conda activate breastagenet && \
+           cd /app/BreastAgeNet && \
+           python -m ipykernel install --user --name=breastagenet --display-name="breastagenet" && \
+           bash run_jupyter.sh'
 ```
 
 
