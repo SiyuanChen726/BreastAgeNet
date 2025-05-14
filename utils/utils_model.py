@@ -27,7 +27,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
+from utils.utils_features import *
 
 
 def add_ageGroup(df):
