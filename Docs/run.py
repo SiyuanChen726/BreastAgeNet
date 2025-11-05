@@ -29,8 +29,16 @@ singularity shell --writable --nv --bind /cephfs/volumes/hpc_data_prj/cb_normalb
 
 source /opt/conda/etc/profile.d/conda.sh
 conda activate breastagenet
+cd /app/project
 
-cd /app/BreastAgeNet
+nohup python run_breastagenet.py --start 28 --end 60 > breastagenet_28_60.log 2>&1 &
+tail -f breastagenet_28_60.log
+
+nohup python run_breastagenet.py --start 45 --end 60 > breastagenet_45_60.log 2>&1 &
+tail -f breastagenet_45_60.log
+
+nohup python run_breastagenet.py --start 0 --end 60 > breastagenet_0_60.log 2>&1 &
+
 python
 from utils.utils_model import *
 def test_single_slide(wsi_path, patch_info, save_pt=None):
@@ -40,7 +48,7 @@ def test_single_slide(wsi_path, patch_info, save_pt=None):
     print(f"device: {device} \nmodel_name: UNI")
     # vectorise the WSI
     patch_df = pd.read_csv(patch_info)
-    wsi_id = np.unique([i.split("_")[0] for i in patch_df["patch_id"]])
+    wsi_id = np.unique([i.split("_")[0] for i in patch_df["patch_id"]])[0]
     if save_pt is not None and os.path.exists(save_pt):
         df = pd.read_csv(save_pt)
         existing_wsi_ids = np.unique(df["wsi_id"])
